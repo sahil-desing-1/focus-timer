@@ -31,7 +31,11 @@ background-clip: text;
     color: var(--accent) !important;
   }
 
-  .wrap{width:100%; max-width:460px;}
+  .wrap{
+    width:100%; 
+    max-width:460px;
+    transition: max-width 0.3s ease; /* UI চওড়া হওয়ার সময় স্মুথ অ্যানিমেশনের জন্য */
+  }
 
   /* auth bar */
   .authbar{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:26px;}
@@ -285,10 +289,11 @@ background-clip: text;
 .gold-btn {
   background: linear-gradient(135deg, #c9962f, #f1cd72, #c9962f);
   color: #000;
-  border: none; border-radius: 8px;
-  padding: 8px 16px;
+  border: none; 
+  border-radius: 6px; /* বর্ডার রেডিয়াস কমানো হয়েছে */
+  padding: 6px 12px; /* বাটন ছোট করার জন্য প্যাডিং কমানো হয়েছে */
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.8rem; /* ফন্ট সাইজ ছোট করা হয়েছে */
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(201,150,47,0.3);
   transition: all 0.3s ease;

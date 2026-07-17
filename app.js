@@ -1136,6 +1136,7 @@ if ('serviceWorker' in navigator) {
 }
 
 /* --- TABS & NAVIGATION --- */
+/* --- TABS & NAVIGATION --- */
 const navItems = document.querySelectorAll('.nav-item');
 const pageTabs = document.querySelectorAll('.page-tab');
 
@@ -1149,9 +1150,16 @@ navItems.forEach(item => {
     item.classList.add('active');
     const target = item.getAttribute('data-target');
     document.getElementById(target).style.display = 'block';
+
+    // UI Width Control: রুটিন ট্যাবে গেলে কন্টেইনার চওড়া হবে
+    const wrapEl = document.querySelector('.wrap');
+    if (target === 'pageRoutine') {
+      wrapEl.style.maxWidth = '850px';
+    } else {
+      wrapEl.style.maxWidth = '460px';
+    }
   });
 });
-
 /* --- ROUTINE LOGIC --- */
 const routineContent = document.getElementById('routineContent');
 
@@ -1189,7 +1197,7 @@ function renderRoutine() {
     </div>
 
     <!-- PDF PAGE BREAK -->
-    <div class="html2pdf__page-break"></div>
+    <div class="html2pdf__page-break" style="page-break-before: always;"></div>
 
     <!-- ROTATING SLOTS -->
     <div class="routine-wrapper">
@@ -1295,7 +1303,8 @@ if(downloadRoutineBtn) {
       filename:     'High_Intensity_Study_Routine.pdf',
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#f8fafc', scrollY: 0 },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['css', 'legacy'] } // এই লাইনটি যোগ করা হলো পেজ ব্রেক কাজ করানোর জন্য
     };
     
     html2pdf().set(opt).from(element).save().then(() => {
