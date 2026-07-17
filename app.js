@@ -196,7 +196,7 @@ onAuthStateChanged(auth, async (user)=>{
   currentUser = user;
   renderAuthBar();
   
-    if (currentUser) {
+  if (currentUser) {
     // Seamless Auth Merge
     const localSess = localGet(LS_SESSIONS, []);
     const localP = localGet(LS_PREFS, null);
@@ -1077,477 +1077,8 @@ function initTimerFromLocalState(){
   pomoToggle.checked = pomodoroMode;
   customTimeRow.style.display = pomodoroMode ? 'none' : 'flex';
   phaseBadge.style.display = pomodoroMode ? 'block' : 'none';
-  pomoPhase = 'work';
   updatePhaseBadge();
-});
-function updatePhaseBadge(){
-  phaseBadge.textContent = pomoPhase === 'work' ? '⏳ ফোকাস সেশন (25 মিনিট)' : '☕ বিরতি (5 মিনিট)';
-}
 
-/* ---------- timer core ---------- */
-const hoursEl = document.getElementById('hours');
-const minutesEl = document.getElementById('minutes');
-const displayEl = document.getElementById('display');
-const hintEl = document.getElementById('hint');
-const startBtn = document.getElementById('startBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const resetBtn = document.getElementById('resetBtn');
-
-let totalSeconds=0, endTime=null, remaining=0, running=false;
-let tickHandle=null;
-let stopwatchMode=false, startAt=null;
-
-function fmt(sec){
-  sec = Math.max(0, sec);
-  const h=String(Math.floor(sec/3600)).padStart(2,'0');
-  const m=String(Math.floor((sec%3600)/60)).padStart(2,'0');
-  const s=String(Math.floor(sec%60)).padStart(2,'0');
-  const ms=String(Math.floor((sec%1)*100)).padStart(2,'0');
-  return h+':'+m+':'+s+'.'+ms;
-}
-function render(){
-  let secLeft;
-  if(stopwatchMode){
-    secLeft = running ? (Date.now()-startAt)/1000 : remaining;
-  } else {
-    secLeft = running ? Math.max(0,(endTime-Date.now())/1000) : remaining;
-  }
-  displayEl.textContent = fmt(secLeft);
-  startBtn.disabled = running; pauseBtn.disabled = !running;
-}
-function tick(){
-  if(!running) return;
-  if(stopwatchMode){ render(); return; }
-  const secLeft = (endTime-Date.now())/1000;
-  if(secLeft<=0){ finish(); return; }
-  render();
-}
-async function finish(){
-  running=false; remaining=0; displayEl.textContent='00:00:00.00';
-  clearInterval(tickHandle);
-  if (window.AndroidApp) { try { AndroidApp.stopNativeTimer(); } catch(e){} }
-  
-  isTimerActive = false;
-  renderSelectionChips();
-
-  const sname = selectedSubMenu ? `${selectedSubject} - ${selectedSubMenu}` : selectedSubject;
-
-  if(pomodoroMode){
-    if(pomoPhase==='work'){
-      playChime(); vibrate(); notify('ফোকাস সেশন শেষ — এবার বিরতি নিন');
-      showToast('⏳ ফোকাস সেশন শেষ! এখন 5 মিনিট বিরতি');
-      await addSession(sname, WORK_MIN, selectedWorkType);
-      pomoPhase='break';
-    } else {
-      playChime(); vibrate(); notify('বিরতি শেষ — আবার ফোকাসে ফিরুন');
-      showToast('☕ বিরতি শেষ! আবার শুরু করুন');
-      pomoPhase='work';
-    }
-    updatePhaseBadge();
-    hintEl.textContent = pomoPhase==='work' ? 'পরের সেশন শুরু করতে Start চাপো' : 'বিরতি শুরু করতে Start চাপো';
-  } else {
-    playChime(); vibrate(); notify(sname + ' পড়ার সময় শেষ হয়েছে');
-    showToast('⏰ ' + sname + ' — সময় শেষ হয়েছে!');
-    await addSession(sname, Math.round(totalSeconds/60), selectedWorkType);
-    hintEl.textContent = 'সময় শেষ! আবার শুরু করতে Start চাপো';
-  }
-  startBtn.disabled=false; pauseBtn.disabled=true;
-  hoursEl.disabled=false; minutesEl.disabled=false;
-  localStorage.removeItem(LS_TIMERSTATE);
-  await refreshEverything();
-}
-function startTimer(fromResume=false){
-  if(!fromResume){
-    if(pomodoroMode){
-      totalSeconds = (pomoPhase==='work' ? WORK_MIN : BREAK_MIN) * 60;
-      stopwatchMode = false;
-    } else {
-      const h=parseInt(hoursEl.value)||0, m=parseInt(minutesEl.value)||0;
-      totalSeconds = h*3600+m*60;
-      stopwatchMode = totalSeconds<=0;
-    }
-    remaining = stopwatchMode ? 0 : totalSeconds;
-  }
-  running=true;
-  if(stopwatchMode){
-    startAt = Date.now() - remaining*1000;
-  } else {
-    endTime = Date.now() + remaining*1000;
-  }
-  if(pomodoroMode){
-    hintEl.textContent = pomoPhase==='work' ? selectedSubject+' পড়া চলছে…' : 'বিরতি চলছে…';
-  } else if(stopwatchMode){
-    hintEl.textContent = selectedSubject+' — স্টপওয়াচ চলছে… (Reset চাপলে সময় সেভ হবে)';
-  } else {
-    hintEl.textContent = selectedSubject+' পড়া চলছে…';
-  }
-  hoursEl.disabled=true; minutesEl.disabled=true;
-  isTimerActive = true; renderSelectionChips();
-  render(); clearInterval(tickHandle); tickHandle = setInterval(tick,30);
-  
-  if (window.AndroidApp) { try { AndroidApp.startNativeTimer(selectedSubject, totalSeconds); } catch(e){} }
-  
-  localSet(LS_TIMERSTATE, { 
-    running:true, endTime, totalSeconds, subject: selectedSubject, 
-    subMenu: selectedSubMenu, workType: selectedWorkType,
-    pomodoroMode, pomoPhase, stopwatchMode, startAt 
-  });
-}
-function pauseTimer(){
-  running=false;
-  if(stopwatchMode){
-    remaining = (Date.now()-startAt)/1000;
-  } else {
-    remaining = Math.max(0,(endTime-Date.now())/1000);
-  }
-  clearInterval(tickHandle);
-  if (window.AndroidApp) { try { AndroidApp.stopNativeTimer(); } catch(e){} }
-  hintEl.textContent = stopwatchMode ? 'বিরতিতে আছে — চালিয়ে যেতে Start চাপো (Reset চাপলে সময় সেভ হবে)' : 'বিরতিতে আছে — চালিয়ে যেতে Start চাপো';
-  render();
-  localSet(LS_TIMERSTATE, { 
-    running:false, remaining, totalSeconds, subject: selectedSubject, 
-    subMenu: selectedSubMenu, workType: selectedWorkType,
-    pomodoroMode, pomoPhase, stopwatchMode, startAt, endTime 
-  });
-}
-async function resetTimer(){
-  const wasRunning = running;
-  const wasStopwatch = stopwatchMode;
-  running=false; clearInterval(tickHandle);
-  if (window.AndroidApp) { try { AndroidApp.stopNativeTimer(); } catch(e){} }
-
-  let finalElapsed = 0;
-  if(wasStopwatch){
-    finalElapsed = wasRunning ? (Date.now()-startAt)/1000 : remaining;
-  } else if (totalSeconds > 0) {
-    const secLeft = wasRunning ? Math.max(0, (endTime-Date.now())/1000) : remaining;
-    finalElapsed = totalSeconds - secLeft;
-  }
-
-  if (finalElapsed > 0) {
-    const mins = Math.round(finalElapsed/60);
-    if (pomodoroMode && pomoPhase === 'break') {
-      showToast('☕ বিরতি বাতিল করা হয়েছে');
-    } else if(mins>=1){
-      const sname = selectedSubMenu ? `${selectedSubject} - ${selectedSubMenu}` : selectedSubject;
-      try {
-        await addSession(sname, mins, selectedWorkType);
-        showToast(`✅ ${mins} মিনিট সেভ হয়েছে`);
-        await refreshEverything();
-      } catch(e) {
-        showToast('⚠️ সেভ করতে সমস্যা হয়েছে');
-      }
-    } else {
-      showToast('1 মিনিটের কম হওয়ায় সেভ হয়নি');
-    }
-  }
-
-  remaining=0; totalSeconds=0; endTime=null; startAt=null; stopwatchMode=false;
-  displayEl.textContent='00:00:00.00';
-  hintEl.textContent='পড়া শুরু করতে Start চাপো';
-  hoursEl.disabled=false; minutesEl.disabled=false;
-  startBtn.disabled=false; pauseBtn.disabled=true;
-  
-  isTimerActive = false;
-  renderSelectionChips();
-  
-  pomoPhase='work'; updatePhaseBadge();
-  localStorage.removeItem(LS_TIMERSTATE);
-}
-
-startBtn.addEventListener('click', ()=> startTimer(isTimerActive));
-pauseBtn.addEventListener('click', pauseTimer);
-resetBtn.addEventListener('click', resetTimer);
-
-/* ---------- fullscreen auto-hide & toggle ---------- */
-const fsContainer = document.getElementById('fsContainer');
-const fullscreenBtn = document.getElementById('fullscreenBtn');
-fullscreenBtn.addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    fsContainer.requestFullscreen().catch(err => console.log(err));
-  } else {
-    document.exitFullscreen();
-  }
-});
-
-let fsTimeout;
-document.addEventListener('mousemove', () => {
-  if (document.fullscreenElement) {
-    fsContainer.style.cursor = 'default';
-    clearTimeout(fsTimeout);
-    fsTimeout = setTimeout(() => {
-      fsContainer.style.cursor = 'none';
-    }, 3000);
-  }
-});
-
-document.addEventListener('fullscreenchange', () => {
-  if (document.fullscreenElement) {
-    fsContainer.classList.add('is-fullscreen');
-    fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>';
-  } else {
-    fsContainer.classList.remove('is-fullscreen');
-    fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
-    fsContainer.style.cursor = 'default';
-    clearTimeout(fsTimeout);
-  }
-});
-
-/* ---------- target progress ---------- */
-const targetInput = document.getElementById('targetInput');
-targetInput.addEventListener('change', async ()=>{
-  prefs.dailyTarget = Math.max(10, parseInt(targetInput.value)||120);
-  await savePrefs(); renderTarget();
-});
-function renderTarget(){
-  targetInput.value = prefs.dailyTarget;
-  const today = todayStr();
-  const done = sessions.filter(s=>s.date===today).reduce((a,s)=>a+s.minutes,0);
-  const pct = Math.min(100, Math.round(done/prefs.dailyTarget*100));
-  document.getElementById('targetFill').style.width = pct+'%';
-  document.getElementById('targetDone').textContent = done+' মিনিট';
-  document.getElementById('targetPct').textContent = pct+'%';
-}
-
-/* ---------- level / xp ---------- */
-function renderLevel(){
-  const total = sessions.reduce((a,s)=>a+s.minutes,0);
-  const XP_PER_LEVEL = 300; 
-  const level = Math.floor(total/XP_PER_LEVEL)+1;
-  const xp = total % XP_PER_LEVEL;
-  document.getElementById('levelNum').textContent = 'Level ' + level;
-  document.getElementById('xpMeta').textContent = xp+' / '+XP_PER_LEVEL+' মিনিট';
-  document.getElementById('xpFill').style.width = Math.round(xp/XP_PER_LEVEL*100)+'%';
-}
-
-/* ---------- week comparison ---------- */
-function renderCompare(){
-  const thisWeek = sessions.filter(s=> s.date >= daysAgoStr(6)).reduce((a,s)=>a+s.minutes,0);
-  const lastWeekDays = new Set(); for(let i=13;i>=7;i--) lastWeekDays.add(daysAgoStr(i));
-  const lastWeek = sessions.filter(s=>lastWeekDays.has(s.date)).reduce((a,s)=>a+s.minutes,0);
-  const el = document.getElementById('compareLine');
-  if(lastWeek===0 && thisWeek===0){ el.textContent=''; return; }
-  if(lastWeek===0){ el.innerHTML = 'এই সপ্তাহে <b>'+thisWeek+'</b> মিনিট পড়েছেন'; return; }
-  const diff = Math.round((thisWeek-lastWeek)/lastWeek*100);
-  const cls = diff>=0 ? 'up' : 'down';
-  const arrow = diff>=0 ? '▲' : '▼';
-  el.innerHTML = 'গত সপ্তাহের তুলনায় <span class="'+cls+'">'+arrow+' '+Math.abs(diff)+'%</span> '+(diff>=0?'বেশি':'কম');
-}
-
-/* ---------- stats tabs ---------- */
-let statsMode='daily';
-const tabDaily=document.getElementById('tabDaily'), tabWeekly=document.getElementById('tabWeekly');
-const chartEl=document.getElementById('chart'), todayTotalEl=document.getElementById('todayTotal');
-tabDaily.addEventListener('click', ()=>{ statsMode='daily'; tabDaily.classList.add('active'); tabWeekly.classList.remove('active'); renderStats(); });
-tabWeekly.addEventListener('click', ()=>{ statsMode='weekly'; tabWeekly.classList.add('active'); tabDaily.classList.remove('active'); renderStats(); });
-
-function barRow(label,minutes,pct){
-  return '<div class="bar-row"><div class="bar-label">'+label+'</div>'
-    + '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div>'
-    + '<div class="bar-value">'+minutes+' মিনিট</div></div>';
-}
-function renderStats(){
-  if(statsMode==='daily'){
-    const today = todayStr();
-    const todaySessions = sessions.filter(s=>s.date===today);
-    const bySubject={}; todaySessions.forEach(s=>{ bySubject[s.subject]=(bySubject[s.subject]||0)+s.minutes; });
-    const entries = Object.entries(bySubject).sort((a,b)=>b[1]-a[1]);
-    const total = todaySessions.reduce((a,s)=>a+s.minutes,0);
-    if(entries.length===0){ chartEl.innerHTML='<div class="empty-note">আজ এখনও কোনো সেশন সম্পন্ন হয়নি</div>'; todayTotalEl.innerHTML=''; return; }
-    const max = Math.max(...entries.map(e=>e[1]));
-    chartEl.innerHTML = entries.map(([s,m])=>barRow(s,m,Math.max(6,Math.round(m/max*100)))).join('');
-    todayTotalEl.innerHTML = 'আজকের মোট সময়: <b>'+total+' মিনিট</b>';
-  } else {
-    const days=[]; for(let i=6;i>=0;i--) days.push(daysAgoStr(i));
-    const totals = days.map(d=>sessions.filter(s=>s.date===d).reduce((a,s)=>a+s.minutes,0));
-    const grand = totals.reduce((a,b)=>a+b,0);
-    if(grand===0){ chartEl.innerHTML='<div class="empty-note">গত 7 দিনে কোনো সেশন সম্পন্ন হয়নি</div>'; todayTotalEl.innerHTML=''; return; }
-    const max = Math.max(...totals,1);
-    chartEl.innerHTML = days.map((d,i)=>{
-      const parts = d.split('-');
-      const dt = new Date(parts[0], parts[1]-1, parts[2]); 
-      const label = bnDayShort[dt.getDay()];
-      const pct = totals[i]===0?0:Math.max(6,Math.round(totals[i]/max*100));
-      return barRow(label, totals[i], pct);
-    }).join('');
-    todayTotalEl.innerHTML = 'গত 7 দিনের মোট সময়: <b>'+grand+' মিনিট</b>';
-  }
-}
-
-/* ---------- streak ---------- */
-function renderStreak(){
-  const uniqueDates = [...new Set(sessions.map(s=>s.date))].sort();
-  if(uniqueDates.length===0){ document.getElementById('streakNum').textContent='0'; document.getElementById('streakBest').textContent='0'; return; }
-  const dateSet = new Set(uniqueDates);
-  let current=0; let cursor=new Date();
-  if(!dateSet.has(todayStr(cursor))) cursor.setDate(cursor.getDate()-1);
-  while(dateSet.has(todayStr(cursor))){ current++; cursor.setDate(cursor.getDate()-1); }
-  let best=1, run=1;
-  for(let i=1;i<uniqueDates.length;i++){
-    const p1 = uniqueDates[i-1].split('-');
-    const p2 = uniqueDates[i].split('-');
-    const prev=new Date(p1[0], p1[1]-1, p1[2]), cur=new Date(p2[0], p2[1]-1, p2[2]);
-    const diff=Math.round((cur-prev)/86400000);
-    run = diff===1 ? run+1 : 1;
-    if(run>best) best=run;
-  }
-  best=Math.max(best,current);
-  document.getElementById('streakNum').textContent=current;
-  document.getElementById('streakBest').textContent=best;
-}
-
-/* ---------- heatmap ---------- */
-function renderHeatmap(){
-  const grid = document.getElementById('heatmap');
-  const totalsByDate = {};
-  sessions.forEach(s=> totalsByDate[s.date]=(totalsByDate[s.date]||0)+s.minutes);
-  const days = 84; 
-  const cells = [];
-  for(let i=days-1;i>=0;i--){
-    const d = daysAgoStr(i);
-    const min = totalsByDate[d]||0;
-    let level = 0;
-    if(min>0 && min<=30) level=1; else if(min>30 && min<=60) level=2; else if(min>60) level=3;
-    cells.push({d, min, level});
-  }
-  const colors = ['#1c1c1a','#4a3a1a','#7a5f22','#c9962f'];
-  grid.innerHTML = cells.map(c=>`<div class="hcell" style="background:${colors[c.level]}" title="${c.d}: ${c.min} মিনিট"></div>`).join('');
-}
-
-/* ---------- history ---------- */
-function renderHistory(){
-  const list = document.getElementById('historyList');
-  const allSess = [...sessions, ...nonStudySessions];
-  const sorted = allSess.sort((a,b)=> (b.ts||0)-(a.ts||0)).slice(0,30);
-  if(sorted.length===0){ list.innerHTML='<div class="empty-note">এখনও কোনো সেশন নেই</div>'; return; }
-  list.innerHTML = sorted.map(s=>{
-    const isNS = s.id && String(s.id).startsWith('ns');
-    const badge = isNS ? `<span style="background:var(--line); padding:2px 6px; border-radius:4px; font-size:0.7rem;">Non-Study</span>` : '';
-    return `
-    <div class="hist-row">
-      <div class="hist-left">
-        ${s.subject} ${badge}
-        <span class="hist-meta">[${s.workType || 'Other'}] &nbsp; ${s.ts ? formatTimeRange(s.ts, s.minutes) : s.date}</span>
-      </div>
-      <div class="hist-right"><span class="hist-min">${s.minutes} min</span><button class="del-btn" data-id="${s.id}">×</button></div>
-    </div>`;
-  }).join('');
-  list.querySelectorAll('.del-btn').forEach(b=>{
-    b.addEventListener('click', async ()=>{
-      await deleteSession(b.dataset.id);
-      await refreshEverything();
-      showToast('সেশন মুছে ফেলা হয়েছে');
-    });
-  });
-}
-
-/* ---------- report export ---------- */
-function getExportSessions(){
-  const range = document.getElementById('exportRange').value;
-  const allSess = [...sessions, ...nonStudySessions];
-  if(range === 'all') return allSess;
-  const limitDate = daysAgoStr(parseInt(range));
-  return allSess.filter(s => s.date >= limitDate);
-}
-
-document.getElementById('exportPdfBtn').addEventListener('click', ()=>{
-  const data = getExportSessions();
-  if(data.length===0){ showToast('No data to export'); return; }
-  
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  
-  const range = document.getElementById('exportRange').value;
-  const titleStr = range === 'all' ? 'All Time Study Report' : `Study Report (Last ${range} Days)`;
-  
-  let studyMin = 0; let nonStudyMin = 0;
-  data.forEach(s => {
-    if(s.id && String(s.id).startsWith('ns')) nonStudyMin += s.minutes;
-    else studyMin += s.minutes;
-  });
-  
-  const studyHr = (studyMin/60).toFixed(1);
-  const nonStudyHr = (nonStudyMin/60).toFixed(1);
-
-  doc.setFontSize(18);
-  doc.text('Focus Study Timer', 14, 22);
-  doc.setFontSize(12);
-  doc.setTextColor(100);
-  doc.text(titleStr, 14, 30);
-  
-  doc.setFontSize(11);
-  doc.setTextColor(0);
-  doc.text(`Total Study Time: ${studyHr} hours`, 14, 40);
-  doc.text(`Total Non-Study Time: ${nonStudyHr} hours`, 14, 46);
-
-  const b2eSubject = {
-    'বাংলা': 'Bengali', 'ইংরেজি': 'English', 'অংক': 'Math', 
-    'জীবন বিজ্ঞান': 'Life Science', 'ভৌত বিজ্ঞান': 'Physical Science', 
-    'ইতিহাস': 'History', 'ভূগোল': 'Geography'
-  };
-  const b2eWorkType = {
-    'রিভিশন': 'Revision', 'নতুন পড়া': 'New Topic', 'মুখস্থ করা': 'Memorize', 
-    'রিডিং পড়া': 'Reading', 'প্রশ্ন উত্তর প্র্যাকটিস': 'Practice', 
-    'নোট তৈরি': 'Notes', 'অন্যান্য': 'Other'
-  };
-
-  const tableData = data.sort((a,b)=>(a.ts||0) - (b.ts||0)).map(s => {
-    const isNS = s.id && String(s.id).startsWith('ns') ? 'Non-Study' : 'Study';
-    let subj = s.subject;
-    if (b2eSubject[subj]) subj = b2eSubject[subj];
-    let wt = s.workType || 'Other';
-    if (b2eWorkType[wt]) wt = b2eWorkType[wt];
-
-    const timeRange = s.ts ? formatTimeRangeOnlyTime(s.ts, s.minutes) : '-';
-
-    return [s.date, timeRange, subj, wt, `${s.minutes} min`, isNS];
-  });
-
-  doc.autoTable({
-    startY: 52,
-    head: [['Date', 'Time', 'Subject', 'Work Type', 'Duration', 'Category']],
-    body: tableData,
-    theme: 'grid',
-    headStyles: { fillColor: [201, 150, 47] },
-    alternateRowStyles: { fillColor: [250, 250, 250] },
-    styles: { font: 'helvetica', fontSize: 10 }
-  });
-
-  doc.save('focus-timer-report.pdf');
-});
-
-/* ---------- JSON Backup & Restore ---------- */
-document.getElementById('backupJsonBtn').addEventListener('click', ()=>{
-  const backupData = { timestamp: Date.now(), sessions, nonStudySessions };
-  const jsonStr = JSON.stringify(backupData, null, 2);
-  const blob = new Blob([jsonStr], { type:'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `focus-timer-backup-${todayStr()}.json`;
-  a.click();
-  showToast('ডেটা ব্যাকআপ ডাউনলোড শুরু হয়েছে');
-});
-
-document.getElementById('restoreJsonBtn').addEventListener('click', ()=>{
-  document.getElementById('restoreFileInput').click();
-});
-
-document.getElementById('restoreFileInput').addEventListener('change', (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      if(!data.sessions || !data.nonStudySessions) { showToast('Invalid backup file'); return; }
-      
-      let newSessCount = 0; let newNonStudyCount = 0;
-      data.nonStudySessions.forEach(ns => {
-        if(!nonStudySessions.find(s => s.id === ns.id && s.ts === ns.ts)) {
-  customTimeRow.style.display = pomodoroMode ? 'none' : 'flex';
-  phaseBadge.style.display = pomodoroMode ? 'block' : 'none';
-  updatePhaseBadge();
-  
   isTimerActive = !!state.running || (state.remaining !== undefined && state.remaining < totalSeconds && !stopwatchMode) || (state.remaining !== undefined && state.remaining > 0 && stopwatchMode);
 
   if(state.running){
@@ -1624,93 +1155,91 @@ navItems.forEach(item => {
 /* --- ROUTINE LOGIC --- */
 const routineContent = document.getElementById('routineContent');
 
-
 function renderRoutine() {
   const html = `
-<div class="rt-container">
-    <div class="rt-header">
-        <h1>HIGH-INTENSITY STUDY ROUTINE</h1>
-        <p>Balanced 2-Week Rotation Plan for Academic Excellence</p>
+    <div class="main-routine-heading">
+      <div>HIGH-INTENSITY STUDY ROUTINE</div>
+      <div style="font-size: 0.95rem; margin-top: 4px; font-weight:600; color: #3b82f6;">(BALANCED 2-WEEK ROTATION)</div>
     </div>
-    <div class="rt-section-card">
-        <div class="rt-section-title">সোম থেকে শনি: দৈনিক রুটিন (Daily Action Plan)</div>
-        <table>
-            <thead>
-                <tr>
-                    <th class="time-col">সময় (Time)</th>
-                    <th>বিষয় / কাজ (Subject / Task)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td class="time-col">সকাল ০৫:০০ - ০৫:১৫</td><td>ঘুম থেকে ওঠা ও ফ্রেশ হওয়া (Wake Up & Refresh)</td></tr>
-                <tr class="math-row"><td class="time-col">সকাল ০৫:১৫ - ০৮:১৫</td><td><strong>অঙ্ক (Mathematics)</strong> - ৩ ঘণ্টা [প্রতিদিন] <span class="rt-badge badge-math">Core</span></td></tr>
-                <tr><td class="time-col">সকাল ০৮:১৫ - ০৯:০০</td><td>স্নান ও ব্রেকফাস্ট (Bath & Breakfast)</td></tr>
-                <tr class="psci-row"><td class="time-col">সকাল ০৯:০০ - ১২:০০</td><td><strong>ভৌতবিজ্ঞান (Physical Science)</strong> - ৩ ঘণ্টা [প্রতিদিন] <span class="rt-badge badge-psci">Core</span></td></tr>
-                <tr><td class="time-col">দুপুর ১২:০০ - ০১:৩০</td><td>অন্যান্য বিষয় (২ সপ্তাহের ঘূর্ণায়মান স্লট) - ১.৫ ঘণ্টা</td></tr>
-                <tr><td class="time-col">দুপুর ০১:৩০ - ০২:৩০</td><td>লাঞ্চ এবং পাওয়ার ন্যাপ (Lunch & Power Nap)</td></tr>
-                <tr class="eng-row"><td class="time-col">বিকাল ০২:৩০ - ০৫:০০</td><td><strong>ইংরেজি (English: Grammar & Writing)</strong> - ২.5 ঘণ্টা [প্রতিদিন] <span class="rt-badge badge-eng">Focus</span></td></tr>
-                <tr><td class="time-col">বিকাল ০৫:০০ - ০৬:০০</td><td>কোনো স্ক্রিন টাইম ছাড়া শরীরচর্চা (Physical Exercise)</td></tr>
-                <tr><td class="time-col">সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td>রিভিশন ও সেলফ-চেক (Revision & Self-Check) - ৩ ঘণ্টা</td></tr>
-                <tr><td class="time-col">রাত ০৯:০০ - ০৯:৩০</td><td>রাতের খাবার (Dinner)</td></tr>
-                <tr><td class="time-col">রাত ০৯:৩০ - ১০:৩০</td><td>শব্দভাণ্ডার মুখস্থ ও আগামীকালের প্ল্যান (Vocabulary & Planning)</td></tr>
-                <tr><td class="time-col">রাত ১০:৩০</td><td>ঘুম (Sleep) 💤</td></tr>
-            </tbody>
-        </table>
+
+    <!-- DAILY ACTION PLAN -->
+    <div class="routine-wrapper">
+      <div class="routine-title-bar">
+        <h3>[ সোম থেকে শনি: দৈনিক রুটিন (Daily Action Plan) ]</h3>
+      </div>
+      <table class="routine-table" id="tableMonSat">
+        <thead>
+          <tr><th>সময়</th><th>বিষয় / কাজ (Subject / Task)</th></tr>
+        </thead>
+        <tbody>
+          <tr data-start="05:00" data-end="05:15"><td>সকাল ০৫:০০ - ০৫:১৫</td><td><span class="sub-break">ঘুম থেকে ওঠা ও ফ্রেশ হওয়া (Wake Up & Refresh)</span></td></tr>
+          <tr data-start="05:15" data-end="08:15"><td>সকাল ০৫:১৫ - ০৮:১৫</td><td><span class="sub-math">অঙ্ক (Mathematics) - ৩ ঘণ্টা [প্রতিদিন]</span></td></tr>
+          <tr data-start="08:15" data-end="09:00"><td>সকাল ০৮:১৫ -  ০৯:০০</td><td><span class="sub-break">স্নান ও ব্রেকফাস্ট (Bath & Breakfast)</span></td></tr>
+          <tr data-start="09:00" data-end="12:00"><td>সকাল ০৯:০০ - ১২:০০</td><td><span class="sub-physics">ভৌতবিজ্ঞান (Physical Science) - ৩ ঘণ্টা [প্রতিদিন]</span></td></tr>
+          <tr data-start="12:00" data-end="13:30"><td>দুপুর ১২:০০ - ০১:৩০</td><td><span class="sub-rev">অন্যান্য বিষয় (২ সপ্তাহের ঘূর্ণায়মান স্লট) - ১.৫ ঘণ্টা</span></td></tr>
+          <tr data-start="13:30" data-end="14:30"><td>দুপুর ০১:৩০ - ০২:৩০</td><td><span class="sub-break">লাঞ্চ এবং পাওয়ার ন্যাপ (Lunch & Power Nap)</span></td></tr>
+          <tr data-start="14:30" data-end="17:00"><td>বিকাল ০২:৩০ - ০৫:০০</td><td><span class="sub-eng">ইংরেজি (English: Grammar & Writing) - ২.৫ ঘণ্টা [প্রতিদিন]</span></td></tr>
+          <tr data-start="17:00" data-end="18:00"><td>বিকাল ০৫:০০ - ০৬:০০</td><td><span class="sub-break">কোনো স্ক্রিন টাইম ছাড়া শরীরচর্চা (Physical Exercise)</span></td></tr>
+          <tr data-start="18:00" data-end="21:00"><td>সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td><span class="sub-rev">রিভিশন ও সেলফ-চেক (Revision & Self-Check) - ৩ ঘণ্টা</span></td></tr>
+          <tr data-start="21:00" data-end="21:30"><td>রাত ০৯:০০ - ০৯: Native</td><td><span class="sub-break">রাতের খাবার (Dinner)</span></td></tr>
+          <tr data-start="21:30" data-end="22:30"><td>রাত ০৯:৩০ - ১০:৩০</td><td><span class="sub-ben">শব্দভাণ্ডার মুখস্থ ও আগামীকালের প্ল্যান (Vocabulary & Planning)</span></td></tr>
+          <tr data-start="22:30" data-end="23:59"><td>রাত ১০:৩০</td><td><span class="sub-break">ঘুম (Sleep)</span></td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- PDF PAGE BREAK -->
     <div class="html2pdf__page-break"></div>
 
-    <div class="rt-section-card">
-        <div class="rt-section-title">দুপুরের সুষম ঘূর্ণায়মান স্লটের বিন্যাস (১২:০০ - ০১:৩০)</div>
-        <div class="week-grid">
-            <div>
-                <div class="week-title">【 সপ্তাহ ১ (Week 1) 】</div>
-                <table>
-                    <thead><tr><th class="time-col">দিন</th><th>বিষয় (Subject)</th></tr></thead>
-                    <tbody>
-                        <tr><td class="time-col">সোমবার</td><td>ইতিহাস (History)</td></tr>
-                        <tr><td class="time-col">মঙ্গলবার</td><td>জীবনবিজ্ঞান (Life Science)</td></tr>
-                        <tr><td class="time-col">বুধবার</td><td>ভূগোল (Geography)</td></tr>
-                        <tr><td class="time-col">বৃহস্পতিবার</td><td>বাংলা (Bengali)</td></tr>
-                        <tr><td class="time-col">শুক্রবার</td><td>ইতিহাস (History)</td></tr>
-                        <tr><td class="time-col">শনিবার</td><td>জীবনবিজ্ঞান (Life Science)</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div>
-                <div class="week-title">【 সপ্তাহ ২ (Week 2) 】</div>
-                <table>
-                    <thead><tr><th class="time-col">দিন</th><th>বিষয় (Subject)</th></tr></thead>
-                    <tbody>
-                        <tr><td class="time-col">সোমবার</td><td>ভূগোল (Geography)</td></tr>
-                        <tr><td class="time-col">মঙ্গলবার</td><td>বাংলা (Bengali)</td></tr>
-                        <tr><td class="time-col">বুধবার</td><td>ইতিহাস (History)</td></tr>
-                        <tr><td class="time-col">বৃহস্পতিবার</td><td>জীবনবিজ্ঞান (Life Science)</td></tr>
-                        <tr><td class="time-col">শুক্রবার</td><td>ভূগোল (Geography)</td></tr>
-                        <tr><td class="time-col">শনিবার</td><td>বাংলা (Bengali)</td></tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- ROTATING SLOTS -->
+    <div class="routine-wrapper">
+      <div class="routine-title-bar">
+        <h3>[ দুপুরের সুষম ঘূর্ণায়মান স্লটের বিন্যাস (১২:০০ - ০১:৩০) ]</h3>
+      </div>
+      <div style="padding: 16px; font-size: 0.95rem; line-height: 1.8; color: #334155;">
+        <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+          <div style="flex: 1; min-width: 250px;">
+            <div style="font-weight: 800; color: #1e40af; margin-bottom: 8px; font-size: 1.05rem;">【 সপ্তাহ ১ (Week 1) 】</div>
+            <div><strong>সোমবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
+            <div><strong>মঙ্গলবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
+            <div><strong>বুধবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
+            <div><strong>বৃহস্পতিবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
+            <div><strong>শুক্রবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
+            <div><strong>শনিবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
+          </div>
+          <div style="flex: 1; min-width: 250px;">
+            <div style="font-weight: 800; color: #1e40af; margin-bottom: 8px; font-size: 1.05rem;">【 সপ্তাহ ২ (Week 2) 】</div>
+            <div><strong>সোমবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
+            <div><strong>মঙ্গলবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
+            <div><strong>বুধবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
+            <div><strong>বৃহস্পতিবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
+            <div><strong>শুক্রবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
+            <div><strong>শনিবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
+          </div>
         </div>
+      </div>
     </div>
 
-    <div class="rt-section-card">
-        <div class="rt-section-title">রবিবার: রিভিশন ও রিকভারি রুটিন (Sunday Revision & Recovery)</div>
-        <table>
-            <thead><tr><th class="time-col">সময় (Time)</th><th>বিষয় / কাজ (Subject / Task)</th></tr></thead>
-            <tbody>
-                <tr class="sunday-row"><td class="time-col">সকাল ০৫:৩০ - ০৯:৩০</td><td>গত ৬ দিনে পড়া অঙ্কের সম্পূর্ণ রিভিশন ও টেস্ট 📝</td></tr>
-                <tr class="sunday-row"><td class="time-col">সকাল ১০:৩০ - দুপুর ০১:৩০</td><td>ভৌতবিজ্ঞান ও ইংরেজির রিভিশন (Revision)</td></tr>
-                <tr><td class="time-col">দুপুর ০১:৩০ - ০২:৩০</td><td>লাঞ্চ (Lunch)</td></tr>
-                <tr style="background-color: #f0fdf4;"><td class="time-col">বিকাল ০২:৩০ - ০৫:০০</td><td>সিনেমা বা বিনোদন (Movie / Entertainment Time) 🎬</td></tr>
-                <tr class="sunday-row"><td class="time-col">সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td>মক টেস্ট বা মডেল প্রশ্নপত্র সমাধান (Mock Test Solving)</td></tr>
-                <tr><td class="time-col">রাত ০৯:০০ - ১০:০০</td><td>আগামী সপ্তাহের লক্ষ্য নির্ধারণ (Goal Setting) ও ঘুম</td></tr>
-            </tbody>
-        </table>
+    <!-- SUNDAY -->
+    <div class="routine-wrapper">
+      <div class="routine-title-bar">
+        <h3>[ রবিবার: রিভিশন ও রিকভারি রুটিন (Sunday Revision & Recovery) ]</h3>
+      </div>
+      <table class="routine-table" id="tableSunday">
+        <thead>
+          <tr><th>সময়</th><th>বিষয় / কাজ</th></tr>
+        </thead>
+        <tbody>
+          <tr data-start="05:30" data-end="09:30"><td>সকাল ০৫:৩০ -  ০৯:৩০</td><td><span class="sub-math">গত ৬ দিনে পড়া অঙ্কের সম্পূর্ণ রিভিশন ও টেস্ট</span></td></tr>
+          <tr data-start="10:30" data-end="13:30"><td>সকাল ১০:৩০ -  দুপুর ০১:৩০</td><td><span class="sub-physics">ভৌতবিজ্ঞান ও ইংরেজির রিভিশন (Revision)</span></td></tr>
+          <tr data-start="13:30" data-end="14:30"><td>দুপুর ০১:৩০ -  ০২:৩০</td><td><span class="sub-break">লাঞ্চ (Lunch)</span></td></tr>
+          <tr data-start="14:30" data-end="17:00"><td>বিকাল ০২:৩০ -  ০৫:০০</td><td><span class="sub-break">সিনেমা বা বিনোদন (Movie / Entertainment Time)</span></td></tr>
+          <tr data-start="18:00" data-end="21:00"><td>সন্ধ্যা ০৬:০০ -  রাত  ০৯:০০</td><td><span class="sub-rev">মক টেস্ট বা মডেল প্রশ্নপত্র সমাধান (Mock Test Solving)</span></td></tr>
+          <tr data-start="21:00" data-end="22:00"><td>রাত ০৯:০০ -  ১০:০০</td><td><span class="sub-ben">আগামী সপ্তাহের লক্ষ্য নির্ধারণ (Goal Setting) ও ঘুম</span></td></tr>
+        </tbody>
+      </table>
     </div>
-</div>
-`;
+  `;
   routineContent.innerHTML = html;
   updateRoutineHighlight();
 }
@@ -1733,7 +1262,7 @@ function updateRoutineHighlight() {
       const endParts = endStr.split(':');
       let endMins = parseInt(endParts[0])*60 + parseInt(endParts[1]);
       
-      if(endMins < startMins) endMins += 24*60; // handle overnight
+      if(endMins < startMins) endMins += 24*60; 
 
       if(currentMinutes >= startMins && currentMinutes < endMins) {
         const tableId = row.closest('table').id;
@@ -1747,7 +1276,6 @@ function updateRoutineHighlight() {
   });
 }
 
-// Initial render
 if(routineContent) {
   renderRoutine();
   setInterval(updateRoutineHighlight, 60000);
@@ -1760,11 +1288,10 @@ if(downloadRoutineBtn) {
     const element = document.getElementById('pageRoutine');
     downloadRoutineBtn.style.display = 'none';
     
-    // Add PDF Mode (Light Theme cleanup for margins)
     element.classList.add('pdf-mode');
     
     const opt = {
-      margin:       [10, 10, 10, 10], // top, left, bottom, right
+      margin:       [10, 10, 10, 10], 
       filename:     'High_Intensity_Study_Routine.pdf',
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#f8fafc', scrollY: 0 },
@@ -1772,7 +1299,6 @@ if(downloadRoutineBtn) {
     };
     
     html2pdf().set(opt).from(element).save().then(() => {
-      // Remove PDF Mode and show button
       element.classList.remove('pdf-mode');
       downloadRoutineBtn.style.display = 'block';
     });
