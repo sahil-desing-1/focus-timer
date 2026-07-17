@@ -380,3 +380,124 @@ background-clip: text;
 
 /* Fix spacing for PDF specifically if needed, but styling is already light */
 .pdf-mode { padding: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+
+/* --- USER ROUTINE CSS --- */
+#pageRoutine {
+    --bg-color: #f4f6f9;
+    --card-bg: #ffffff;
+    --text-main: #2c3e50;
+    --primary: #1e3a8a;
+    --accent-math: #d97706;
+    --accent-p-sci: #dc2626;
+    --accent-eng: #059669;
+    --accent-sunday: #7c3aed;
+    --border-color: #e2e8f0;
+}
+#routineContent {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Kalpurush', 'SolaimanLipi';
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 12px;
+}
+#routineContent .rt-container {
+    max-width: 1000px;
+    width: 100%;
+}
+#routineContent .rt-header {
+    text-align: center;
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    padding: 30px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+#routineContent .rt-header h1 {
+    margin: 0;
+    font-size: 26px;
+    letter-spacing: 1px;
+}
+#routineContent .rt-header p {
+    margin: 10px 0 0 0;
+    opacity: 0.9;
+    font-size: 16px;
+}
+#routineContent .rt-section-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+}
+#routineContent .rt-section-title {
+    font-size: 20px;
+    color: var(--primary);
+    border-bottom: 3px solid var(--primary);
+    padding-bottom: 8px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+}
+#routineContent table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    margin-bottom: 10px;
+}
+#routineContent th, #routineContent td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 15px;
+}
+#routineContent th {
+    background-color: #f8fafc;
+    color: var(--primary);
+    font-weight: 600;
+}
+#routineContent tr:hover {
+    background-color: #f8fafc;
+}
+#routineContent .time-col {
+    width: 25%;
+    font-weight: bold;
+    color: #475569;
+}
+#routineContent .math-row { border-left: 5px solid var(--accent-math); background-color: #fffbeb; }
+#routineContent .psci-row { border-left: 5px solid var(--accent-p-sci); background-color: #fef2f2; }
+#routineContent .eng-row { border-left: 5px solid var(--accent-eng); background-color: #ecfdf5; }
+#routineContent .sunday-row { border-left: 5px solid var(--accent-sunday); background-color: #f5f3ff; }
+#routineContent .rt-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+#routineContent .badge-math { background-color: var(--accent-math); }
+#routineContent .badge-psci { background-color: var(--accent-p-sci); }
+#routineContent .badge-eng { background-color: var(--accent-eng); }
+#routineContent .week-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+@media (max-width: 768px) {
+    #routineContent .week-grid { grid-template-columns: 1fr; }
+    #routineContent th, #routineContent td { padding: 10px; font-size: 14px; }
+    #routineContent .time-col { width: 35%; }
+}
+#routineContent .week-title {
+    background-color: var(--primary);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 15px;
+}

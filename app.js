@@ -1624,91 +1624,93 @@ navItems.forEach(item => {
 /* --- ROUTINE LOGIC --- */
 const routineContent = document.getElementById('routineContent');
 
+
 function renderRoutine() {
   const html = `
-    <div class="main-routine-heading">
-      <div>HIGH-INTENSITY STUDY ROUTINE</div>
-      <div style="font-size: 0.95rem; margin-top: 4px; font-weight:600; color: #3b82f6;">(BALANCED 2-WEEK ROTATION)</div>
+<div class="rt-container">
+    <div class="rt-header">
+        <h1>HIGH-INTENSITY STUDY ROUTINE</h1>
+        <p>Balanced 2-Week Rotation Plan for Academic Excellence</p>
     </div>
-
-    <!-- DAILY ACTION PLAN -->
-    <div class="routine-wrapper">
-      <div class="routine-title-bar">
-        <h3>[ সোম থেকে শনি: দৈনিক রুটিন (Daily Action Plan) ]</h3>
-      </div>
-      <table class="routine-table" id="tableMonSat">
-        <thead>
-          <tr><th>সময়</th><th>বিষয় / কাজ (Subject / Task)</th></tr>
-        </thead>
-        <tbody>
-          <tr data-start="05:00" data-end="05:15"><td>সকাল ০৫:০০ - ০৫:১৫</td><td><span class="sub-break">ঘুম থেকে ওঠা ও ফ্রেশ হওয়া (Wake Up & Refresh)</span></td></tr>
-          <tr data-start="05:15" data-end="08:15"><td>সকাল ০৫:১৫ - ০৮:১৫</td><td><span class="sub-math">অঙ্ক (Mathematics) - ৩ ঘণ্টা [প্রতিদিন]</span></td></tr>
-          <tr data-start="08:15" data-end="09:00"><td>সকাল ০৮:১৫ - ০৯:০০</td><td><span class="sub-break">স্নান ও ব্রেকফাস্ট (Bath & Breakfast)</span></td></tr>
-          <tr data-start="09:00" data-end="12:00"><td>সকাল ০৯:০০ - ১২:০০</td><td><span class="sub-physics">ভৌতবিজ্ঞান (Physical Science) - ৩ ঘণ্টা [প্রতিদিন]</span></td></tr>
-          <tr data-start="12:00" data-end="13:30"><td>দুপুর ১২:০০ - ০১:৩০</td><td><span class="sub-rev">অন্যান্য বিষয় (২ সপ্তাহের ঘূর্ণায়মান স্লট) - ১.৫ ঘণ্টা</span></td></tr>
-          <tr data-start="13:30" data-end="14:30"><td>দুপুর ০১:৩০ - ০২:৩০</td><td><span class="sub-break">লাঞ্চ এবং পাওয়ার ন্যাপ (Lunch & Power Nap)</span></td></tr>
-          <tr data-start="14:30" data-end="17:00"><td>বিকাল ০২:৩০ - ০৫:০০</td><td><span class="sub-eng">ইংরেজি (English: Grammar & Writing) - ২.৫ ঘণ্টা [প্রতিদিন]</span></td></tr>
-          <tr data-start="17:00" data-end="18:00"><td>বিকাল ০৫:০০ - ০৬:০০</td><td><span class="sub-break">কোনো স্ক্রিন টাইম ছাড়া শরীরচর্চা (Physical Exercise)</span></td></tr>
-          <tr data-start="18:00" data-end="21:00"><td>সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td><span class="sub-rev">রিভিশন ও সেলফ-চেক (Revision & Self-Check) - ৩ ঘণ্টা</span></td></tr>
-          <tr data-start="21:00" data-end="21:30"><td>রাত ০৯:০০ - ০৯:৩০</td><td><span class="sub-break">রাতের খাবার (Dinner)</span></td></tr>
-          <tr data-start="21:30" data-end="22:30"><td>রাত ০৯:৩০ - ১০:৩০</td><td><span class="sub-ben">শব্দভাণ্ডার মুখস্থ ও আগামীকালের প্ল্যান (Vocabulary & Planning)</span></td></tr>
-          <tr data-start="22:30" data-end="23:59"><td>রাত ১০:৩০</td><td><span class="sub-break">ঘুম (Sleep)</span></td></tr>
-        </tbody>
-      </table>
+    <div class="rt-section-card">
+        <div class="rt-section-title">সোম থেকে শনি: দৈনিক রুটিন (Daily Action Plan)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="time-col">সময় (Time)</th>
+                    <th>বিষয় / কাজ (Subject / Task)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="time-col">সকাল ০৫:০০ - ০৫:১৫</td><td>ঘুম থেকে ওঠা ও ফ্রেশ হওয়া (Wake Up & Refresh)</td></tr>
+                <tr class="math-row"><td class="time-col">সকাল ০৫:১৫ - ০৮:১৫</td><td><strong>অঙ্ক (Mathematics)</strong> - ৩ ঘণ্টা [প্রতিদিন] <span class="rt-badge badge-math">Core</span></td></tr>
+                <tr><td class="time-col">সকাল ০৮:১৫ - ০৯:০০</td><td>স্নান ও ব্রেকফাস্ট (Bath & Breakfast)</td></tr>
+                <tr class="psci-row"><td class="time-col">সকাল ০৯:০০ - ১২:০০</td><td><strong>ভৌতবিজ্ঞান (Physical Science)</strong> - ৩ ঘণ্টা [প্রতিদিন] <span class="rt-badge badge-psci">Core</span></td></tr>
+                <tr><td class="time-col">দুপুর ১২:০০ - ০১:৩০</td><td>অন্যান্য বিষয় (২ সপ্তাহের ঘূর্ণায়মান স্লট) - ১.৫ ঘণ্টা</td></tr>
+                <tr><td class="time-col">দুপুর ০১:৩০ - ০২:৩০</td><td>লাঞ্চ এবং পাওয়ার ন্যাপ (Lunch & Power Nap)</td></tr>
+                <tr class="eng-row"><td class="time-col">বিকাল ০২:৩০ - ০৫:০০</td><td><strong>ইংরেজি (English: Grammar & Writing)</strong> - ২.5 ঘণ্টা [প্রতিদিন] <span class="rt-badge badge-eng">Focus</span></td></tr>
+                <tr><td class="time-col">বিকাল ০৫:০০ - ০৬:০০</td><td>কোনো স্ক্রিন টাইম ছাড়া শরীরচর্চা (Physical Exercise)</td></tr>
+                <tr><td class="time-col">সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td>রিভিশন ও সেলফ-চেক (Revision & Self-Check) - ৩ ঘণ্টা</td></tr>
+                <tr><td class="time-col">রাত ০৯:০০ - ০৯:৩০</td><td>রাতের খাবার (Dinner)</td></tr>
+                <tr><td class="time-col">রাত ০৯:৩০ - ১০:৩০</td><td>শব্দভাণ্ডার মুখস্থ ও আগামীকালের প্ল্যান (Vocabulary & Planning)</td></tr>
+                <tr><td class="time-col">রাত ১০:৩০</td><td>ঘুম (Sleep) 💤</td></tr>
+            </tbody>
+        </table>
     </div>
 
     <!-- PDF PAGE BREAK -->
     <div class="html2pdf__page-break"></div>
 
-    <!-- ROTATING SLOTS -->
-    <div class="routine-wrapper">
-      <div class="routine-title-bar">
-        <h3>[ দুপুরের সুষম ঘূর্ণায়মান স্লটের বিন্যাস (১২:০০ - ০১:৩০) ]</h3>
-      </div>
-      <div style="padding: 16px; font-size: 0.95rem; line-height: 1.8; color: #334155;">
-        <div style="display: flex; flex-wrap: wrap; gap: 24px;">
-          <div style="flex: 1; min-width: 250px;">
-            <div style="font-weight: 800; color: #1e40af; margin-bottom: 8px; font-size: 1.05rem;">【 সপ্তাহ ১ (Week 1) 】</div>
-            <div><strong>সোমবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
-            <div><strong>মঙ্গলবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
-            <div><strong>বুধবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
-            <div><strong>বৃহস্পতিবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
-            <div><strong>শুক্রবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
-            <div><strong>শনিবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
-          </div>
-          <div style="flex: 1; min-width: 250px;">
-            <div style="font-weight: 800; color: #1e40af; margin-bottom: 8px; font-size: 1.05rem;">【 সপ্তাহ ২ (Week 2) 】</div>
-            <div><strong>সোমবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
-            <div><strong>মঙ্গলবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
-            <div><strong>বুধবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
-            <div><strong>বৃহস্পতিবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
-            <div><strong>শুক্রবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
-            <div><strong>শনিবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
-          </div>
+    <div class="rt-section-card">
+        <div class="rt-section-title">দুপুরের সুষম ঘূর্ণায়মান স্লটের বিন্যাস (১২:০০ - ০১:৩০)</div>
+        <div class="week-grid">
+            <div>
+                <div class="week-title">【 সপ্তাহ ১ (Week 1) 】</div>
+                <table>
+                    <thead><tr><th class="time-col">দিন</th><th>বিষয় (Subject)</th></tr></thead>
+                    <tbody>
+                        <tr><td class="time-col">সোমবার</td><td>ইতিহাস (History)</td></tr>
+                        <tr><td class="time-col">মঙ্গলবার</td><td>জীবনবিজ্ঞান (Life Science)</td></tr>
+                        <tr><td class="time-col">বুধবার</td><td>ভূগোল (Geography)</td></tr>
+                        <tr><td class="time-col">বৃহস্পতিবার</td><td>বাংলা (Bengali)</td></tr>
+                        <tr><td class="time-col">শুক্রবার</td><td>ইতিহাস (History)</td></tr>
+                        <tr><td class="time-col">শনিবার</td><td>জীবনবিজ্ঞান (Life Science)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="week-title">【 সপ্তাহ ২ (Week 2) 】</div>
+                <table>
+                    <thead><tr><th class="time-col">দিন</th><th>বিষয় (Subject)</th></tr></thead>
+                    <tbody>
+                        <tr><td class="time-col">সোমবার</td><td>ভূগোল (Geography)</td></tr>
+                        <tr><td class="time-col">মঙ্গলবার</td><td>বাংলা (Bengali)</td></tr>
+                        <tr><td class="time-col">বুধবার</td><td>ইতিহাস (History)</td></tr>
+                        <tr><td class="time-col">বৃহস্পতিবার</td><td>জীবনবিজ্ঞান (Life Science)</td></tr>
+                        <tr><td class="time-col">শুক্রবার</td><td>ভূগোল (Geography)</td></tr>
+                        <tr><td class="time-col">শনিবার</td><td>বাংলা (Bengali)</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
     </div>
 
-    <!-- SUNDAY -->
-    <div class="routine-wrapper">
-      <div class="routine-title-bar">
-        <h3>[ রবিবার: রিভিশন ও রিকভারি রুটিন (Sunday Revision & Recovery) ]</h3>
-      </div>
-      <table class="routine-table" id="tableSunday">
-        <thead>
-          <tr><th>সময়</th><th>বিষয় / কাজ</th></tr>
-        </thead>
-        <tbody>
-          <tr data-start="05:30" data-end="09:30"><td>সকাল ০৫:৩০ - ০৯:৩০</td><td><span class="sub-math">গত ৬ দিনে পড়া অঙ্কের সম্পূর্ণ রিভিশন ও টেস্ট</span></td></tr>
-          <tr data-start="10:30" data-end="13:30"><td>সকাল ১০:৩০ - দুপুর ০১:৩০</td><td><span class="sub-physics">ভৌতবিজ্ঞান ও ইংরেজির রিভিশন (Revision)</span></td></tr>
-          <tr data-start="13:30" data-end="14:30"><td>দুপুর ০১:৩০ - ০২:৩০</td><td><span class="sub-break">লাঞ্চ (Lunch)</span></td></tr>
-          <tr data-start="14:30" data-end="17:00"><td>বিকাল ০২:৩০ - ০৫:০০</td><td><span class="sub-break">সিনেমা বা বিনোদন (Movie / Entertainment Time)</span></td></tr>
-          <tr data-start="18:00" data-end="21:00"><td>সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td><span class="sub-rev">মক টেস্ট বা মডেল প্রশ্নপত্র সমাধান (Mock Test Solving)</span></td></tr>
-          <tr data-start="21:00" data-end="22:00"><td>রাত ০৯:০০ - ১০:০০</td><td><span class="sub-ben">আগামী সপ্তাহের লক্ষ্য নির্ধারণ (Goal Setting) ও ঘুম</span></td></tr>
-        </tbody>
-      </table>
+    <div class="rt-section-card">
+        <div class="rt-section-title">রবিবার: রিভিশন ও রিকভারি রুটিন (Sunday Revision & Recovery)</div>
+        <table>
+            <thead><tr><th class="time-col">সময় (Time)</th><th>বিষয় / কাজ (Subject / Task)</th></tr></thead>
+            <tbody>
+                <tr class="sunday-row"><td class="time-col">সকাল ০৫:৩০ - ০৯:৩০</td><td>গত ৬ দিনে পড়া অঙ্কের সম্পূর্ণ রিভিশন ও টেস্ট 📝</td></tr>
+                <tr class="sunday-row"><td class="time-col">সকাল ১০:৩০ - দুপুর ০১:৩০</td><td>ভৌতবিজ্ঞান ও ইংরেজির রিভিশন (Revision)</td></tr>
+                <tr><td class="time-col">দুপুর ০১:৩০ - ০২:৩০</td><td>লাঞ্চ (Lunch)</td></tr>
+                <tr style="background-color: #f0fdf4;"><td class="time-col">বিকাল ০২:৩০ - ০৫:০০</td><td>সিনেমা বা বিনোদন (Movie / Entertainment Time) 🎬</td></tr>
+                <tr class="sunday-row"><td class="time-col">সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td>মক টেস্ট বা মডেল প্রশ্নপত্র সমাধান (Mock Test Solving)</td></tr>
+                <tr><td class="time-col">রাত ০৯:০০ - ১০:০০</td><td>আগামী সপ্তাহের লক্ষ্য নির্ধারণ (Goal Setting) ও ঘুম</td></tr>
+            </tbody>
+        </table>
     </div>
-  `
+</div>
+`;
   routineContent.innerHTML = html;
   updateRoutineHighlight();
 }
