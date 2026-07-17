@@ -1046,7 +1046,6 @@ document.getElementById('restoreFileInput').addEventListener('change', (e)=>{
           if(currentUser) { await setDoc(doc(db, 'users', currentUser.uid, 'sessions', s.id), s); }
         }
       }
-      
       if(!currentUser){ localSet(LS_SESSIONS, sessions); }
       await refreshEverything();
       showToast(`রিস্টোর সফল: ${newSessCount} study, ${newNonStudyCount} non-study added!`);
@@ -1071,11 +1070,480 @@ function initTimerFromLocalState(){
   selectedSubject = state.subject || prefs.subjects[0]?.name; 
   selectedSubMenu = state.subMenu || '';
   selectedWorkType = state.workType || 'রিভিশন';
-
+  
   totalSeconds = state.totalSeconds;
   stopwatchMode = !!state.stopwatchMode;
   pomodoroMode = !!state.pomodoroMode; pomoPhase = state.pomoPhase || 'work';
   pomoToggle.checked = pomodoroMode;
+  customTimeRow.style.display = pomodoroMode ? 'none' : 'flex';
+  phaseBadge.style.display = pomodoroMode ? 'block' : 'none';
+  pomoPhase = 'work';
+  updatePhaseBadge();
+});
+function updatePhaseBadge(){
+  phaseBadge.textContent = pomoPhase === 'work' ? '⏳ ফোকাস সেশন (25 মিনিট)' : '☕ বিরতি (5 মিনিট)';
+}
+
+/* ---------- timer core ---------- */
+const hoursEl = document.getElementById('hours');
+const minutesEl = document.getElementById('minutes');
+const displayEl = document.getElementById('display');
+const hintEl = document.getElementById('hint');
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+let totalSeconds=0, endTime=null, remaining=0, running=false;
+let tickHandle=null;
+let stopwatchMode=false, startAt=null;
+
+function fmt(sec){
+  sec = Math.max(0, sec);
+  const h=String(Math.floor(sec/3600)).padStart(2,'0');
+  const m=String(Math.floor((sec%3600)/60)).padStart(2,'0');
+  const s=String(Math.floor(sec%60)).padStart(2,'0');
+  const ms=String(Math.floor((sec%1)*100)).padStart(2,'0');
+  return h+':'+m+':'+s+'.'+ms;
+}
+function render(){
+  let secLeft;
+  if(stopwatchMode){
+    secLeft = running ? (Date.now()-startAt)/1000 : remaining;
+  } else {
+    secLeft = running ? Math.max(0,(endTime-Date.now())/1000) : remaining;
+  }
+  displayEl.textContent = fmt(secLeft);
+  startBtn.disabled = running; pauseBtn.disabled = !running;
+}
+function tick(){
+  if(!running) return;
+  if(stopwatchMode){ render(); return; }
+  const secLeft = (endTime-Date.now())/1000;
+  if(secLeft<=0){ finish(); return; }
+  render();
+}
+async function finish(){
+  running=false; remaining=0; displayEl.textContent='00:00:00.00';
+  clearInterval(tickHandle);
+  if (window.AndroidApp) { try { AndroidApp.stopNativeTimer(); } catch(e){} }
+  
+  isTimerActive = false;
+  renderSelectionChips();
+
+  const sname = selectedSubMenu ? `${selectedSubject} - ${selectedSubMenu}` : selectedSubject;
+
+  if(pomodoroMode){
+    if(pomoPhase==='work'){
+      playChime(); vibrate(); notify('ফোকাস সেশন শেষ — এবার বিরতি নিন');
+      showToast('⏳ ফোকাস সেশন শেষ! এখন 5 মিনিট বিরতি');
+      await addSession(sname, WORK_MIN, selectedWorkType);
+      pomoPhase='break';
+    } else {
+      playChime(); vibrate(); notify('বিরতি শেষ — আবার ফোকাসে ফিরুন');
+      showToast('☕ বিরতি শেষ! আবার শুরু করুন');
+      pomoPhase='work';
+    }
+    updatePhaseBadge();
+    hintEl.textContent = pomoPhase==='work' ? 'পরের সেশন শুরু করতে Start চাপো' : 'বিরতি শুরু করতে Start চাপো';
+  } else {
+    playChime(); vibrate(); notify(sname + ' পড়ার সময় শেষ হয়েছে');
+    showToast('⏰ ' + sname + ' — সময় শেষ হয়েছে!');
+    await addSession(sname, Math.round(totalSeconds/60), selectedWorkType);
+    hintEl.textContent = 'সময় শেষ! আবার শুরু করতে Start চাপো';
+  }
+  startBtn.disabled=false; pauseBtn.disabled=true;
+  hoursEl.disabled=false; minutesEl.disabled=false;
+  localStorage.removeItem(LS_TIMERSTATE);
+  await refreshEverything();
+}
+function startTimer(fromResume=false){
+  if(!fromResume){
+    if(pomodoroMode){
+      totalSeconds = (pomoPhase==='work' ? WORK_MIN : BREAK_MIN) * 60;
+      stopwatchMode = false;
+    } else {
+      const h=parseInt(hoursEl.value)||0, m=parseInt(minutesEl.value)||0;
+      totalSeconds = h*3600+m*60;
+      stopwatchMode = totalSeconds<=0;
+    }
+    remaining = stopwatchMode ? 0 : totalSeconds;
+  }
+  running=true;
+  if(stopwatchMode){
+    startAt = Date.now() - remaining*1000;
+  } else {
+    endTime = Date.now() + remaining*1000;
+  }
+  if(pomodoroMode){
+    hintEl.textContent = pomoPhase==='work' ? selectedSubject+' পড়া চলছে…' : 'বিরতি চলছে…';
+  } else if(stopwatchMode){
+    hintEl.textContent = selectedSubject+' — স্টপওয়াচ চলছে… (Reset চাপলে সময় সেভ হবে)';
+  } else {
+    hintEl.textContent = selectedSubject+' পড়া চলছে…';
+  }
+  hoursEl.disabled=true; minutesEl.disabled=true;
+  isTimerActive = true; renderSelectionChips();
+  render(); clearInterval(tickHandle); tickHandle = setInterval(tick,30);
+  
+  if (window.AndroidApp) { try { AndroidApp.startNativeTimer(selectedSubject, totalSeconds); } catch(e){} }
+  
+  localSet(LS_TIMERSTATE, { 
+    running:true, endTime, totalSeconds, subject: selectedSubject, 
+    subMenu: selectedSubMenu, workType: selectedWorkType,
+    pomodoroMode, pomoPhase, stopwatchMode, startAt 
+  });
+}
+function pauseTimer(){
+  running=false;
+  if(stopwatchMode){
+    remaining = (Date.now()-startAt)/1000;
+  } else {
+    remaining = Math.max(0,(endTime-Date.now())/1000);
+  }
+  clearInterval(tickHandle);
+  if (window.AndroidApp) { try { AndroidApp.stopNativeTimer(); } catch(e){} }
+  hintEl.textContent = stopwatchMode ? 'বিরতিতে আছে — চালিয়ে যেতে Start চাপো (Reset চাপলে সময় সেভ হবে)' : 'বিরতিতে আছে — চালিয়ে যেতে Start চাপো';
+  render();
+  localSet(LS_TIMERSTATE, { 
+    running:false, remaining, totalSeconds, subject: selectedSubject, 
+    subMenu: selectedSubMenu, workType: selectedWorkType,
+    pomodoroMode, pomoPhase, stopwatchMode, startAt, endTime 
+  });
+}
+async function resetTimer(){
+  const wasRunning = running;
+  const wasStopwatch = stopwatchMode;
+  running=false; clearInterval(tickHandle);
+  if (window.AndroidApp) { try { AndroidApp.stopNativeTimer(); } catch(e){} }
+
+  let finalElapsed = 0;
+  if(wasStopwatch){
+    finalElapsed = wasRunning ? (Date.now()-startAt)/1000 : remaining;
+  } else if (totalSeconds > 0) {
+    const secLeft = wasRunning ? Math.max(0, (endTime-Date.now())/1000) : remaining;
+    finalElapsed = totalSeconds - secLeft;
+  }
+
+  if (finalElapsed > 0) {
+    const mins = Math.round(finalElapsed/60);
+    if (pomodoroMode && pomoPhase === 'break') {
+      showToast('☕ বিরতি বাতিল করা হয়েছে');
+    } else if(mins>=1){
+      const sname = selectedSubMenu ? `${selectedSubject} - ${selectedSubMenu}` : selectedSubject;
+      try {
+        await addSession(sname, mins, selectedWorkType);
+        showToast(`✅ ${mins} মিনিট সেভ হয়েছে`);
+        await refreshEverything();
+      } catch(e) {
+        showToast('⚠️ সেভ করতে সমস্যা হয়েছে');
+      }
+    } else {
+      showToast('1 মিনিটের কম হওয়ায় সেভ হয়নি');
+    }
+  }
+
+  remaining=0; totalSeconds=0; endTime=null; startAt=null; stopwatchMode=false;
+  displayEl.textContent='00:00:00.00';
+  hintEl.textContent='পড়া শুরু করতে Start চাপো';
+  hoursEl.disabled=false; minutesEl.disabled=false;
+  startBtn.disabled=false; pauseBtn.disabled=true;
+  
+  isTimerActive = false;
+  renderSelectionChips();
+  
+  pomoPhase='work'; updatePhaseBadge();
+  localStorage.removeItem(LS_TIMERSTATE);
+}
+
+startBtn.addEventListener('click', ()=> startTimer(isTimerActive));
+pauseBtn.addEventListener('click', pauseTimer);
+resetBtn.addEventListener('click', resetTimer);
+
+/* ---------- fullscreen auto-hide & toggle ---------- */
+const fsContainer = document.getElementById('fsContainer');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    fsContainer.requestFullscreen().catch(err => console.log(err));
+  } else {
+    document.exitFullscreen();
+  }
+});
+
+let fsTimeout;
+document.addEventListener('mousemove', () => {
+  if (document.fullscreenElement) {
+    fsContainer.style.cursor = 'default';
+    clearTimeout(fsTimeout);
+    fsTimeout = setTimeout(() => {
+      fsContainer.style.cursor = 'none';
+    }, 3000);
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) {
+    fsContainer.classList.add('is-fullscreen');
+    fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>';
+  } else {
+    fsContainer.classList.remove('is-fullscreen');
+    fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+    fsContainer.style.cursor = 'default';
+    clearTimeout(fsTimeout);
+  }
+});
+
+/* ---------- target progress ---------- */
+const targetInput = document.getElementById('targetInput');
+targetInput.addEventListener('change', async ()=>{
+  prefs.dailyTarget = Math.max(10, parseInt(targetInput.value)||120);
+  await savePrefs(); renderTarget();
+});
+function renderTarget(){
+  targetInput.value = prefs.dailyTarget;
+  const today = todayStr();
+  const done = sessions.filter(s=>s.date===today).reduce((a,s)=>a+s.minutes,0);
+  const pct = Math.min(100, Math.round(done/prefs.dailyTarget*100));
+  document.getElementById('targetFill').style.width = pct+'%';
+  document.getElementById('targetDone').textContent = done+' মিনিট';
+  document.getElementById('targetPct').textContent = pct+'%';
+}
+
+/* ---------- level / xp ---------- */
+function renderLevel(){
+  const total = sessions.reduce((a,s)=>a+s.minutes,0);
+  const XP_PER_LEVEL = 300; 
+  const level = Math.floor(total/XP_PER_LEVEL)+1;
+  const xp = total % XP_PER_LEVEL;
+  document.getElementById('levelNum').textContent = 'Level ' + level;
+  document.getElementById('xpMeta').textContent = xp+' / '+XP_PER_LEVEL+' মিনিট';
+  document.getElementById('xpFill').style.width = Math.round(xp/XP_PER_LEVEL*100)+'%';
+}
+
+/* ---------- week comparison ---------- */
+function renderCompare(){
+  const thisWeek = sessions.filter(s=> s.date >= daysAgoStr(6)).reduce((a,s)=>a+s.minutes,0);
+  const lastWeekDays = new Set(); for(let i=13;i>=7;i--) lastWeekDays.add(daysAgoStr(i));
+  const lastWeek = sessions.filter(s=>lastWeekDays.has(s.date)).reduce((a,s)=>a+s.minutes,0);
+  const el = document.getElementById('compareLine');
+  if(lastWeek===0 && thisWeek===0){ el.textContent=''; return; }
+  if(lastWeek===0){ el.innerHTML = 'এই সপ্তাহে <b>'+thisWeek+'</b> মিনিট পড়েছেন'; return; }
+  const diff = Math.round((thisWeek-lastWeek)/lastWeek*100);
+  const cls = diff>=0 ? 'up' : 'down';
+  const arrow = diff>=0 ? '▲' : '▼';
+  el.innerHTML = 'গত সপ্তাহের তুলনায় <span class="'+cls+'">'+arrow+' '+Math.abs(diff)+'%</span> '+(diff>=0?'বেশি':'কম');
+}
+
+/* ---------- stats tabs ---------- */
+let statsMode='daily';
+const tabDaily=document.getElementById('tabDaily'), tabWeekly=document.getElementById('tabWeekly');
+const chartEl=document.getElementById('chart'), todayTotalEl=document.getElementById('todayTotal');
+tabDaily.addEventListener('click', ()=>{ statsMode='daily'; tabDaily.classList.add('active'); tabWeekly.classList.remove('active'); renderStats(); });
+tabWeekly.addEventListener('click', ()=>{ statsMode='weekly'; tabWeekly.classList.add('active'); tabDaily.classList.remove('active'); renderStats(); });
+
+function barRow(label,minutes,pct){
+  return '<div class="bar-row"><div class="bar-label">'+label+'</div>'
+    + '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div>'
+    + '<div class="bar-value">'+minutes+' মিনিট</div></div>';
+}
+function renderStats(){
+  if(statsMode==='daily'){
+    const today = todayStr();
+    const todaySessions = sessions.filter(s=>s.date===today);
+    const bySubject={}; todaySessions.forEach(s=>{ bySubject[s.subject]=(bySubject[s.subject]||0)+s.minutes; });
+    const entries = Object.entries(bySubject).sort((a,b)=>b[1]-a[1]);
+    const total = todaySessions.reduce((a,s)=>a+s.minutes,0);
+    if(entries.length===0){ chartEl.innerHTML='<div class="empty-note">আজ এখনও কোনো সেশন সম্পন্ন হয়নি</div>'; todayTotalEl.innerHTML=''; return; }
+    const max = Math.max(...entries.map(e=>e[1]));
+    chartEl.innerHTML = entries.map(([s,m])=>barRow(s,m,Math.max(6,Math.round(m/max*100)))).join('');
+    todayTotalEl.innerHTML = 'আজকের মোট সময়: <b>'+total+' মিনিট</b>';
+  } else {
+    const days=[]; for(let i=6;i>=0;i--) days.push(daysAgoStr(i));
+    const totals = days.map(d=>sessions.filter(s=>s.date===d).reduce((a,s)=>a+s.minutes,0));
+    const grand = totals.reduce((a,b)=>a+b,0);
+    if(grand===0){ chartEl.innerHTML='<div class="empty-note">গত 7 দিনে কোনো সেশন সম্পন্ন হয়নি</div>'; todayTotalEl.innerHTML=''; return; }
+    const max = Math.max(...totals,1);
+    chartEl.innerHTML = days.map((d,i)=>{
+      const parts = d.split('-');
+      const dt = new Date(parts[0], parts[1]-1, parts[2]); 
+      const label = bnDayShort[dt.getDay()];
+      const pct = totals[i]===0?0:Math.max(6,Math.round(totals[i]/max*100));
+      return barRow(label, totals[i], pct);
+    }).join('');
+    todayTotalEl.innerHTML = 'গত 7 দিনের মোট সময়: <b>'+grand+' মিনিট</b>';
+  }
+}
+
+/* ---------- streak ---------- */
+function renderStreak(){
+  const uniqueDates = [...new Set(sessions.map(s=>s.date))].sort();
+  if(uniqueDates.length===0){ document.getElementById('streakNum').textContent='0'; document.getElementById('streakBest').textContent='0'; return; }
+  const dateSet = new Set(uniqueDates);
+  let current=0; let cursor=new Date();
+  if(!dateSet.has(todayStr(cursor))) cursor.setDate(cursor.getDate()-1);
+  while(dateSet.has(todayStr(cursor))){ current++; cursor.setDate(cursor.getDate()-1); }
+  let best=1, run=1;
+  for(let i=1;i<uniqueDates.length;i++){
+    const p1 = uniqueDates[i-1].split('-');
+    const p2 = uniqueDates[i].split('-');
+    const prev=new Date(p1[0], p1[1]-1, p1[2]), cur=new Date(p2[0], p2[1]-1, p2[2]);
+    const diff=Math.round((cur-prev)/86400000);
+    run = diff===1 ? run+1 : 1;
+    if(run>best) best=run;
+  }
+  best=Math.max(best,current);
+  document.getElementById('streakNum').textContent=current;
+  document.getElementById('streakBest').textContent=best;
+}
+
+/* ---------- heatmap ---------- */
+function renderHeatmap(){
+  const grid = document.getElementById('heatmap');
+  const totalsByDate = {};
+  sessions.forEach(s=> totalsByDate[s.date]=(totalsByDate[s.date]||0)+s.minutes);
+  const days = 84; 
+  const cells = [];
+  for(let i=days-1;i>=0;i--){
+    const d = daysAgoStr(i);
+    const min = totalsByDate[d]||0;
+    let level = 0;
+    if(min>0 && min<=30) level=1; else if(min>30 && min<=60) level=2; else if(min>60) level=3;
+    cells.push({d, min, level});
+  }
+  const colors = ['#1c1c1a','#4a3a1a','#7a5f22','#c9962f'];
+  grid.innerHTML = cells.map(c=>`<div class="hcell" style="background:${colors[c.level]}" title="${c.d}: ${c.min} মিনিট"></div>`).join('');
+}
+
+/* ---------- history ---------- */
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  const allSess = [...sessions, ...nonStudySessions];
+  const sorted = allSess.sort((a,b)=> (b.ts||0)-(a.ts||0)).slice(0,30);
+  if(sorted.length===0){ list.innerHTML='<div class="empty-note">এখনও কোনো সেশন নেই</div>'; return; }
+  list.innerHTML = sorted.map(s=>{
+    const isNS = s.id && String(s.id).startsWith('ns');
+    const badge = isNS ? `<span style="background:var(--line); padding:2px 6px; border-radius:4px; font-size:0.7rem;">Non-Study</span>` : '';
+    return `
+    <div class="hist-row">
+      <div class="hist-left">
+        ${s.subject} ${badge}
+        <span class="hist-meta">[${s.workType || 'Other'}] &nbsp; ${s.ts ? formatTimeRange(s.ts, s.minutes) : s.date}</span>
+      </div>
+      <div class="hist-right"><span class="hist-min">${s.minutes} min</span><button class="del-btn" data-id="${s.id}">×</button></div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.del-btn').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      await deleteSession(b.dataset.id);
+      await refreshEverything();
+      showToast('সেশন মুছে ফেলা হয়েছে');
+    });
+  });
+}
+
+/* ---------- report export ---------- */
+function getExportSessions(){
+  const range = document.getElementById('exportRange').value;
+  const allSess = [...sessions, ...nonStudySessions];
+  if(range === 'all') return allSess;
+  const limitDate = daysAgoStr(parseInt(range));
+  return allSess.filter(s => s.date >= limitDate);
+}
+
+document.getElementById('exportPdfBtn').addEventListener('click', ()=>{
+  const data = getExportSessions();
+  if(data.length===0){ showToast('No data to export'); return; }
+  
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  const range = document.getElementById('exportRange').value;
+  const titleStr = range === 'all' ? 'All Time Study Report' : `Study Report (Last ${range} Days)`;
+  
+  let studyMin = 0; let nonStudyMin = 0;
+  data.forEach(s => {
+    if(s.id && String(s.id).startsWith('ns')) nonStudyMin += s.minutes;
+    else studyMin += s.minutes;
+  });
+  
+  const studyHr = (studyMin/60).toFixed(1);
+  const nonStudyHr = (nonStudyMin/60).toFixed(1);
+
+  doc.setFontSize(18);
+  doc.text('Focus Study Timer', 14, 22);
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(titleStr, 14, 30);
+  
+  doc.setFontSize(11);
+  doc.setTextColor(0);
+  doc.text(`Total Study Time: ${studyHr} hours`, 14, 40);
+  doc.text(`Total Non-Study Time: ${nonStudyHr} hours`, 14, 46);
+
+  const b2eSubject = {
+    'বাংলা': 'Bengali', 'ইংরেজি': 'English', 'অংক': 'Math', 
+    'জীবন বিজ্ঞান': 'Life Science', 'ভৌত বিজ্ঞান': 'Physical Science', 
+    'ইতিহাস': 'History', 'ভূগোল': 'Geography'
+  };
+  const b2eWorkType = {
+    'রিভিশন': 'Revision', 'নতুন পড়া': 'New Topic', 'মুখস্থ করা': 'Memorize', 
+    'রিডিং পড়া': 'Reading', 'প্রশ্ন উত্তর প্র্যাকটিস': 'Practice', 
+    'নোট তৈরি': 'Notes', 'অন্যান্য': 'Other'
+  };
+
+  const tableData = data.sort((a,b)=>(a.ts||0) - (b.ts||0)).map(s => {
+    const isNS = s.id && String(s.id).startsWith('ns') ? 'Non-Study' : 'Study';
+    let subj = s.subject;
+    if (b2eSubject[subj]) subj = b2eSubject[subj];
+    let wt = s.workType || 'Other';
+    if (b2eWorkType[wt]) wt = b2eWorkType[wt];
+
+    const timeRange = s.ts ? formatTimeRangeOnlyTime(s.ts, s.minutes) : '-';
+
+    return [s.date, timeRange, subj, wt, `${s.minutes} min`, isNS];
+  });
+
+  doc.autoTable({
+    startY: 52,
+    head: [['Date', 'Time', 'Subject', 'Work Type', 'Duration', 'Category']],
+    body: tableData,
+    theme: 'grid',
+    headStyles: { fillColor: [201, 150, 47] },
+    alternateRowStyles: { fillColor: [250, 250, 250] },
+    styles: { font: 'helvetica', fontSize: 10 }
+  });
+
+  doc.save('focus-timer-report.pdf');
+});
+
+/* ---------- JSON Backup & Restore ---------- */
+document.getElementById('backupJsonBtn').addEventListener('click', ()=>{
+  const backupData = { timestamp: Date.now(), sessions, nonStudySessions };
+  const jsonStr = JSON.stringify(backupData, null, 2);
+  const blob = new Blob([jsonStr], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `focus-timer-backup-${todayStr()}.json`;
+  a.click();
+  showToast('ডেটা ব্যাকআপ ডাউনলোড শুরু হয়েছে');
+});
+
+document.getElementById('restoreJsonBtn').addEventListener('click', ()=>{
+  document.getElementById('restoreFileInput').click();
+});
+
+document.getElementById('restoreFileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!data.sessions || !data.nonStudySessions) { showToast('Invalid backup file'); return; }
+      
+      let newSessCount = 0; let newNonStudyCount = 0;
+      data.nonStudySessions.forEach(ns => {
+        if(!nonStudySessions.find(s => s.id === ns.id && s.ts === ns.ts)) {
   customTimeRow.style.display = pomodoroMode ? 'none' : 'flex';
   phaseBadge.style.display = pomodoroMode ? 'block' : 'none';
   updatePhaseBadge();
@@ -1188,6 +1656,9 @@ function renderRoutine() {
         </tbody>
       </table>
     </div>
+
+    <!-- PDF PAGE BREAK -->
+    <div class="html2pdf__page-break"></div>
 
     <!-- ROTATING SLOTS -->
     <div class="routine-wrapper">
