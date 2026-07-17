@@ -1156,77 +1156,88 @@ navItems.forEach(item => {
 /* --- ROUTINE LOGIC --- */
 const routineContent = document.getElementById('routineContent');
 
-const week1Rotation = ["ইতিহাস", "জীবনবিজ্ঞান", "ভূগোল", "বাংলা", "ইতিহাস", "জীবনবিজ্ঞান"];
-const week2Rotation = ["ভূগোল", "বাংলা", "ইতিহাস", "জীবনবিজ্ঞান", "ভূগোল", "বাংলা"];
-
-function getWeekRotationSubject(dayIndex) {
-  // ISO week number approximation
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-  const isWeek1 = (weekNo % 2 !== 0);
-  
-  if(dayIndex >= 1 && dayIndex <= 6) {
-    const list = isWeek1 ? week1Rotation : week2Rotation;
-    return list[dayIndex - 1]; // 1=Monday... 6=Saturday
-  }
-  return "";
-}
-
 function renderRoutine() {
-  const d = new Date();
-  const day = d.getDay(); // 0 = Sunday, 1 = Monday...
-  
-  const rotationSubject = getWeekRotationSubject(day===0 ? 1 : day); // default to Mon if Sun
-
-  // Helper for color coding
-  const colorCode = (sub) => {
-    if(sub.includes('অঙ্ক')) return `<span class="sub-math">${sub}</span>`;
-    if(sub.includes('ভৌতবিজ্ঞান')) return `<span class="sub-physics">${sub}</span>`;
-    if(sub.includes('জীবনবিজ্ঞান')) return `<span class="sub-life">${sub}</span>`;
-    if(sub.includes('ইতিহাস')) return `<span class="sub-history">${sub}</span>`;
-    if(sub.includes('ভূগোল')) return `<span class="sub-geo">${sub}</span>`;
-    if(sub.includes('ইংরেজি')) return `<span class="sub-eng">${sub}</span>`;
-    if(sub.includes('বাংলা')) return `<span class="sub-ben">${sub}</span>`;
-    if(sub.includes('রিভিশন') || sub.includes('মক টেস্ট')) return `<span class="sub-rev">${sub}</span>`;
-    return `<span class="sub-break">${sub}</span>`;
-  };
-
-  const currentRotationColor = colorCode(rotationSubject);
-
   const html = `
-    <div class="routine-subtitle">১. সোমবার থেকে শনিবার (Daily Action Plan)</div>
-    <table class="routine-table" id="tableMonSat">
-      <thead><tr><th>সময়</th><th>বিষয় / কাজ</th></tr></thead>
-      <tbody>
-        <tr data-start="05:00" data-end="05:15"><td>০৫:০০ - ০৫:১৫</td><td>${colorCode('ঘুম থেকে ওঠা ও ফ্রেশ হওয়া')}</td></tr>
-        <tr data-start="05:15" data-end="08:15"><td>০৫:১৫ - ০৮:১৫</td><td>${colorCode('অঙ্ক (Mathematics) - ৩ ঘণ্টা')}</td></tr>
-        <tr data-start="08:15" data-end="09:00"><td>০৮:১৫ - ০৯:০০</td><td>${colorCode('স্নান ও ব্রেকফাস্ট')}</td></tr>
-        <tr data-start="09:00" data-end="12:00"><td>০৯:০০ - ১২:০০</td><td>${colorCode('ভৌতবিজ্ঞান (Physical Science) - ৩ ঘণ্টা')}</td></tr>
-        <tr data-start="12:00" data-end="13:30"><td>১২:০০ - ০১:৩০</td><td>${currentRotationColor} (ঘূর্ণায়মান) - ১.৫ ঘণ্টা</td></tr>
-        <tr data-start="13:30" data-end="14:30"><td>০১:৩০ - ০২:৩০</td><td>${colorCode('লাঞ্চ এবং পাওয়ার ন্যাপ')}</td></tr>
-        <tr data-start="14:30" data-end="17:00"><td>০২:৩০ - ০৫:০০</td><td>${colorCode('ইংরেজি (English: Grammar & Writing) - ২.৫ ঘণ্টা')}</td></tr>
-        <tr data-start="17:00" data-end="18:00"><td>০৫:০০ - ০৬:০০</td><td>${colorCode('কোনো স্ক্রিন টাইম ছাড়া শরীরচর্চা')}</td></tr>
-        <tr data-start="18:00" data-end="21:00"><td>০৬:০০ - ০৯:০০</td><td>${colorCode('রিভিশন ও সেলফ-চেক - ৩ ঘণ্টা')}</td></tr>
-        <tr data-start="21:00" data-end="21:30"><td>০৯:০০ - ০৯:৩০</td><td>${colorCode('রাতের খাবার')}</td></tr>
-        <tr data-start="21:30" data-end="22:30"><td>০৯:৩০ - ১০:৩০</td><td>${colorCode('শব্দভাণ্ডার মুখস্থ ও প্ল্যানিং')}</td></tr>
-      </tbody>
-    </table>
+    <div class="main-routine-heading">
+      <div>HIGH-INTENSITY STUDY ROUTINE</div>
+      <div style="font-size: 0.95rem; margin-top: 4px; font-weight:600; color: #3b82f6;">(BALANCED 2-WEEK ROTATION)</div>
+    </div>
 
-    <div class="routine-subtitle" style="margin-top:30px;">২. রবিবার (Revision & Recovery)</div>
-    <table class="routine-table" id="tableSunday">
-      <thead><tr><th>সময়</th><th>বিষয় / কাজ</th></tr></thead>
-      <tbody>
-        <tr data-start="05:30" data-end="09:30"><td>০৫:৩০ - ০৯:৩০</td><td>${colorCode('গত ৬ দিনে পড়া অঙ্কের সম্পূর্ণ রিভিশন ও টেস্ট')}</td></tr>
-        <tr data-start="10:30" data-end="13:30"><td>১০:৩০ - ০১:৩০</td><td>${colorCode('ভৌতবিজ্ঞান ও ইংরেজির রিভিশন')}</td></tr>
-        <tr data-start="13:30" data-end="14:30"><td>০১:৩০ - ০২:৩০</td><td>${colorCode('লাঞ্চ')}</td></tr>
-        <tr data-start="14:30" data-end="17:00"><td>০২:৩০ - ০৫:০০</td><td>${colorCode('সিনেমা বা বিনোদন')}</td></tr>
-        <tr data-start="18:00" data-end="21:00"><td>০৬:০০ - ০৯:০০</td><td>${colorCode('মক টেস্ট বা মডেল প্রশ্নপত্র সমাধান')}</td></tr>
-        <tr data-start="21:00" data-end="22:00"><td>০৯:০০ - ১০:০০</td><td>${colorCode('লক্ষ্য নির্ধারণ ও ঘুম')}</td></tr>
-      </tbody>
-    </table>
-  `;
+    <!-- DAILY ACTION PLAN -->
+    <div class="routine-wrapper">
+      <div class="routine-title-bar">
+        <h3>[ সোম থেকে শনি: দৈনিক রুটিন (Daily Action Plan) ]</h3>
+      </div>
+      <table class="routine-table" id="tableMonSat">
+        <thead>
+          <tr><th>সময়</th><th>বিষয় / কাজ (Subject / Task)</th></tr>
+        </thead>
+        <tbody>
+          <tr data-start="05:00" data-end="05:15"><td>সকাল ০৫:০০ - ০৫:১৫</td><td><span class="sub-break">ঘুম থেকে ওঠা ও ফ্রেশ হওয়া (Wake Up & Refresh)</span></td></tr>
+          <tr data-start="05:15" data-end="08:15"><td>সকাল ০৫:১৫ - ০৮:১৫</td><td><span class="sub-math">অঙ্ক (Mathematics) - ৩ ঘণ্টা [প্রতিদিন]</span></td></tr>
+          <tr data-start="08:15" data-end="09:00"><td>সকাল ০৮:১৫ - ০৯:০০</td><td><span class="sub-break">স্নান ও ব্রেকফাস্ট (Bath & Breakfast)</span></td></tr>
+          <tr data-start="09:00" data-end="12:00"><td>সকাল ০৯:০০ - ১২:০০</td><td><span class="sub-physics">ভৌতবিজ্ঞান (Physical Science) - ৩ ঘণ্টা [প্রতিদিন]</span></td></tr>
+          <tr data-start="12:00" data-end="13:30"><td>দুপুর ১২:০০ - ০১:৩০</td><td><span class="sub-rev">অন্যান্য বিষয় (২ সপ্তাহের ঘূর্ণায়মান স্লট) - ১.৫ ঘণ্টা</span></td></tr>
+          <tr data-start="13:30" data-end="14:30"><td>দুপুর ০১:৩০ - ০২:৩০</td><td><span class="sub-break">লাঞ্চ এবং পাওয়ার ন্যাপ (Lunch & Power Nap)</span></td></tr>
+          <tr data-start="14:30" data-end="17:00"><td>বিকাল ০২:৩০ - ০৫:০০</td><td><span class="sub-eng">ইংরেজি (English: Grammar & Writing) - ২.৫ ঘণ্টা [প্রতিদিন]</span></td></tr>
+          <tr data-start="17:00" data-end="18:00"><td>বিকাল ০৫:০০ - ০৬:০০</td><td><span class="sub-break">কোনো স্ক্রিন টাইম ছাড়া শরীরচর্চা (Physical Exercise)</span></td></tr>
+          <tr data-start="18:00" data-end="21:00"><td>সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td><span class="sub-rev">রিভিশন ও সেলফ-চেক (Revision & Self-Check) - ৩ ঘণ্টা</span></td></tr>
+          <tr data-start="21:00" data-end="21:30"><td>রাত ০৯:০০ - ০৯:৩০</td><td><span class="sub-break">রাতের খাবার (Dinner)</span></td></tr>
+          <tr data-start="21:30" data-end="22:30"><td>রাত ০৯:৩০ - ১০:৩০</td><td><span class="sub-ben">শব্দভাণ্ডার মুখস্থ ও আগামীকালের প্ল্যান (Vocabulary & Planning)</span></td></tr>
+          <tr data-start="22:30" data-end="23:59"><td>রাত ১০:৩০</td><td><span class="sub-break">ঘুম (Sleep)</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ROTATING SLOTS -->
+    <div class="routine-wrapper">
+      <div class="routine-title-bar">
+        <h3>[ দুপুরের সুষম ঘূর্ণায়মান স্লটের বিন্যাস (১২:০০ - ০১:৩০) ]</h3>
+      </div>
+      <div style="padding: 16px; font-size: 0.95rem; line-height: 1.8; color: #334155;">
+        <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+          <div style="flex: 1; min-width: 250px;">
+            <div style="font-weight: 800; color: #1e40af; margin-bottom: 8px; font-size: 1.05rem;">【 সপ্তাহ ১ (Week 1) 】</div>
+            <div><strong>সোমবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
+            <div><strong>মঙ্গলবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
+            <div><strong>বুধবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
+            <div><strong>বৃহস্পতিবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
+            <div><strong>শুক্রবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
+            <div><strong>শনিবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
+          </div>
+          <div style="flex: 1; min-width: 250px;">
+            <div style="font-weight: 800; color: #1e40af; margin-bottom: 8px; font-size: 1.05rem;">【 সপ্তাহ ২ (Week 2) 】</div>
+            <div><strong>সোমবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
+            <div><strong>মঙ্গলবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
+            <div><strong>বুধবার:</strong> <span class="sub-history">ইতিহাস (History)</span></div>
+            <div><strong>বৃহস্পতিবার:</strong> <span class="sub-life">জীবনবিজ্ঞান (Life Science)</span></div>
+            <div><strong>শুক্রবার:</strong> <span class="sub-geo">ভূগোল (Geography)</span></div>
+            <div><strong>শনিবার:</strong> <span class="sub-ben">বাংলা (Bengali)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUNDAY -->
+    <div class="routine-wrapper">
+      <div class="routine-title-bar">
+        <h3>[ রবিবার: রিভিশন ও রিকভারি রুটিন (Sunday Revision & Recovery) ]</h3>
+      </div>
+      <table class="routine-table" id="tableSunday">
+        <thead>
+          <tr><th>সময়</th><th>বিষয় / কাজ</th></tr>
+        </thead>
+        <tbody>
+          <tr data-start="05:30" data-end="09:30"><td>সকাল ০৫:৩০ - ০৯:৩০</td><td><span class="sub-math">গত ৬ দিনে পড়া অঙ্কের সম্পূর্ণ রিভিশন ও টেস্ট</span></td></tr>
+          <tr data-start="10:30" data-end="13:30"><td>সকাল ১০:৩০ - দুপুর ০১:৩০</td><td><span class="sub-physics">ভৌতবিজ্ঞান ও ইংরেজির রিভিশন (Revision)</span></td></tr>
+          <tr data-start="13:30" data-end="14:30"><td>দুপুর ০১:৩০ - ০২:৩০</td><td><span class="sub-break">লাঞ্চ (Lunch)</span></td></tr>
+          <tr data-start="14:30" data-end="17:00"><td>বিকাল ০২:৩০ - ০৫:০০</td><td><span class="sub-break">সিনেমা বা বিনোদন (Movie / Entertainment Time)</span></td></tr>
+          <tr data-start="18:00" data-end="21:00"><td>সন্ধ্যা ০৬:০০ - রাত ০৯:০০</td><td><span class="sub-rev">মক টেস্ট বা মডেল প্রশ্নপত্র সমাধান (Mock Test Solving)</span></td></tr>
+          <tr data-start="21:00" data-end="22:00"><td>রাত ০৯:০০ - ১০:০০</td><td><span class="sub-ben">আগামী সপ্তাহের লক্ষ্য নির্ধারণ (Goal Setting) ও ঘুম</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  `
   routineContent.innerHTML = html;
   updateRoutineHighlight();
 }
@@ -1238,7 +1249,7 @@ function updateRoutineHighlight() {
   const currentMinutes = h * 60 + m;
   const isSunday = d.getDay() === 0;
 
-  const rows = document.querySelectorAll('.routine-row, .routine-table tbody tr');
+  const rows = document.querySelectorAll('.routine-table tbody tr');
   rows.forEach(row => {
     row.classList.remove('active-slot');
     const startStr = row.getAttribute('data-start');
@@ -1247,10 +1258,11 @@ function updateRoutineHighlight() {
       const startParts = startStr.split(':');
       const startMins = parseInt(startParts[0])*60 + parseInt(startParts[1]);
       const endParts = endStr.split(':');
-      const endMins = parseInt(endParts[0])*60 + parseInt(endParts[1]);
+      let endMins = parseInt(endParts[0])*60 + parseInt(endParts[1]);
+      
+      if(endMins < startMins) endMins += 24*60; // handle overnight
 
       if(currentMinutes >= startMins && currentMinutes < endMins) {
-        // Only highlight if it's the correct day's table
         const tableId = row.closest('table').id;
         if(isSunday && tableId === 'tableSunday') {
           row.classList.add('active-slot');
@@ -1265,26 +1277,30 @@ function updateRoutineHighlight() {
 // Initial render
 if(routineContent) {
   renderRoutine();
-  setInterval(updateRoutineHighlight, 60000); // check every minute
+  setInterval(updateRoutineHighlight, 60000);
 }
 
-/* --- PDF DOWNLOAD --- */
+/* --- PDF DOWNLOAD FIX --- */
 const downloadRoutineBtn = document.getElementById('downloadRoutineBtn');
 if(downloadRoutineBtn) {
   downloadRoutineBtn.addEventListener('click', () => {
-    // Use html2pdf
     const element = document.getElementById('pageRoutine');
-    // Hide the button temporarily for PDF
     downloadRoutineBtn.style.display = 'none';
+    
+    // Add PDF Mode (Light Theme cleanup for margins)
+    element.classList.add('pdf-mode');
+    
     const opt = {
-      margin:       10,
+      margin:       [10, 10, 10, 10], // top, left, bottom, right
       filename:     'High_Intensity_Study_Routine.pdf',
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0d0d0c' },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#f8fafc', scrollY: 0 },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
     html2pdf().set(opt).from(element).save().then(() => {
+      // Remove PDF Mode and show button
+      element.classList.remove('pdf-mode');
       downloadRoutineBtn.style.display = 'block';
     });
   });

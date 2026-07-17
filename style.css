@@ -277,10 +277,10 @@ background-clip: text;
 .page-tab { animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* --- ROUTINE DASHBOARD --- */
+/* --- ROUTINE DASHBOARD (LIGHT & CLEAN THEME) --- */
 .routine-header {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .gold-btn {
   background: linear-gradient(135deg, #c9962f, #f1cd72, #c9962f);
@@ -293,61 +293,90 @@ background-clip: text;
   box-shadow: 0 4px 10px rgba(201,150,47,0.3);
   transition: all 0.3s ease;
 }
-.gold-btn:active { transform: scale(0.95); }
 
-.routine-content {
-  background: rgba(20,20,20,0.6);
-  border: 1px solid rgba(201,150,47,0.2);
+#pageRoutine {
+  background: #f8fafc;
+  color: #1e293b;
   border-radius: 12px;
   padding: 16px;
-  overflow-x: auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  margin-bottom: 30px;
 }
+#pageRoutine h2 {
+  color: #0f172a !important;
+}
+
+.routine-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.routine-title-bar {
+  background: #e0e7ff;
+  padding: 12px 16px;
+  border-bottom: 1px solid #c7d2fe;
+}
+.routine-title-bar h3 {
+  margin: 0;
+  color: #3730a3;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
 .routine-table {
   width: 100%; border-collapse: collapse;
-  min-width: 400px;
 }
 .routine-table th, .routine-table td {
-  padding: 12px;
-  border: 1px solid rgba(255,255,255,0.05);
+  padding: 12px 16px;
   text-align: left;
   font-size: 0.9rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
 }
 .routine-table th {
-  background: rgba(201,150,47,0.1);
-  color: var(--gold);
+  background: #334155;
+  color: #ffffff;
   font-weight: 600;
+  border-bottom: 2px solid #3730a3;
 }
-.routine-row { transition: all 0.3s ease; }
-.routine-row:hover { background: rgba(255,255,255,0.02); }
+.routine-table tbody tr:last-child td { border-bottom: none; }
+.routine-table tbody tr { transition: background 0.3s ease; }
+.routine-table tbody tr:hover { background: #f8fafc; }
 
-/* GOLDEN NEON GLOW FOR ACTIVE TIME SLOT */
-.routine-row.active-slot {
-  background: rgba(201,150,47,0.05);
-  box-shadow: inset 0 0 15px rgba(201,150,47,0.2), 0 0 10px rgba(201,150,47,0.3);
-  border: 1px solid var(--gold);
+/* Premium Glow for Active in Light Mode */
+.routine-table tbody tr.active-slot {
+  background: #fef9c3;
+  box-shadow: inset 3px 0 0 #eab308;
 }
 .active-slot td {
-  color: #fff;
-  text-shadow: 0 0 5px rgba(201,150,47,0.5);
-  font-weight: bold;
+  color: #854d0e;
+  font-weight: 700;
 }
 
-/* SUBJECT COLOR CODING */
-.sub-math { color: #ff5555; font-weight:600; }
-.sub-physics { color: #4488ff; font-weight:600; }
-.sub-life { color: #bb55ff; font-weight:600; }
-.sub-history { color: #ffaa00; font-weight:600; }
-.sub-geo { color: #00dd88; font-weight:600; }
-.sub-eng { color: #aaaaaa; font-weight:600; }
-.sub-ben { color: #ff7744; font-weight:600; }
-.sub-rev { color: #f1cd72; font-weight:600; }
-.sub-break { color: #777; font-size:0.85rem; }
+/* Colors for Light Background */
+.sub-math { color: #dc2626; font-weight: 600; }
+.sub-physics { color: #2563eb; font-weight: 600; }
+.sub-life { color: #9333ea; font-weight: 600; }
+.sub-history { color: #ea580c; font-weight: 600; }
+.sub-geo { color: #16a34a; font-weight: 600; }
+.sub-eng { color: #475569; font-weight: 600; }
+.sub-ben { color: #b45309; font-weight: 600; }
+.sub-rev { color: #d97706; font-weight: 600; }
+.sub-break { color: #94a3b8; font-size: 0.85rem; }
 
-.routine-subtitle {
-  color: var(--gold);
-  font-size: 1.1rem;
-  margin: 20px 0 10px 0;
-  border-bottom: 1px dashed rgba(201,150,47,0.3);
-  padding-bottom: 5px;
+.main-routine-heading {
+  text-align: center;
+  color: #1e3a8a;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  border-bottom: 2px solid #bfdbfe;
+  padding-bottom: 10px;
 }
 
+/* Fix spacing for PDF specifically if needed, but styling is already light */
+.pdf-mode { padding: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
