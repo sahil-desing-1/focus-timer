@@ -1134,8 +1134,8 @@ if ('serviceWorker' in navigator) {
       console.log('SW registration failed: ', err);
     });
   });
-} 
- 
+}
+
 /* --- TABS & NAVIGATION --- */
 const navItems = document.querySelectorAll('.nav-item');
 const pageTabs = document.querySelectorAll('.page-tab');
